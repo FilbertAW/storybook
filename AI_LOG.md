@@ -74,3 +74,22 @@ The AI-usage slide is written from this file.
 - **Gap found in the plan (not changed, needs a decision):** rule 2 (draft → not found) runs before rule 3 (purchased → full). A creator can `PATCH` a book with buyers back to `draft`, and the buyers then get 404 on a book they paid for, while `/me` still lists it as owned. That contradicts "a purchase is ownership". Verified with a one-off probe. No test asserts it.
 - **Verified:** 187 tests (resolveAccess unit tests for every rule and boundary; catalog, kid, pages and entitlement; checkout, idempotency and races; subscription and cancel; events, `/me`, dev clock), typecheck, lint, and a curl walk-through on a live server. Mutation check: breaking the preview SQL limit turns two tests red.
 - **Not verified:** the Turso half of the plan's "done" signal, and the Vercel entry.
+
+## Block 5 — Frontend
+
+- **Prompt:** start block 5.
+- **Dependencies added (all on the stack list):** `@tanstack/react-query`, `zustand`, `react-router` (v8). shadcn components added: card, input, label, badge, tabs, dialog, textarea, alert, separator.
+- **Result:** login (pick a seeded user), library with All / My books / Locked tabs plus search and age filter, book detail, reader with the paywall after the preview, checkout (review → overlap warning → mock payment → result), account (subscription and cancel, PIN, Kid mode entry, orders), Kid mode (library, reader, PIN pad to leave), creator dashboard and book form.
+- **Structure:** `src/api` (typed client, endpoints, query hooks), `src/stores/session.ts` (Zustand: token and mode only), `src/features/*`, `src/app` (router, shells, guards). Responses are parsed with the shared zod schemas; the book form validates with the same `createBookRequestSchema` the server uses.
+- **State rules followed:** server data only in TanStack Query. The API client reads the token with `useSessionStore.getState()`. Every parent/kid switch and logout calls `queryClient.clear()` (`features/session/actions.ts`). A successful payment invalidates `books`, `me` and `orders`. Entering Kid mode overwrites the persisted token, so a reload stays in Kid mode.
+- **Decisions made without asking (open to change):**
+  - Kid mode cannot call `/me`, so `mode` lives in the store; the role comes from `/me` for parents.
+  - Checkout is a page (`/checkout/book/:id`, `/checkout/subscription`), not a dialog, so it survives a reload. One `Idempotency-Key` per attempt; "Try again" makes a new one.
+  - `SessionGate` pins a device in Kid mode to `/kid`, whatever URL is opened. Role guards only hide screens; the server enforces roles.
+  - Reader events: `book_opened` on open, `preview_completed` when the paywall shows.
+  - Creator form: new pages and the cover get placeholder `picsum.photos` URLs to fill quickly; the creator can paste real ones.
+  - The Vite template's `erasableSyntaxOnly` forbids constructor parameter properties, so web classes use plain fields.
+- **Found and fixed:** the reader requested `/plans` in Kid mode, where it is always refused; now parent-only.
+- **Verification (no browser tooling was available):** typecheck, lint, production build, and the Vite dev server compiling every screen. A throwaway test (not committed: it needs a test runner in the web package) ran the real frontend client, zod parsing, session store and query cache against the real API, in-process, through all three "done when" journeys: Locked → pay → reading (incl. failed payment, retry, idempotent replay), subscribed purchase with the overlap warning, Kid mode hand-over and PIN return (parent token gone from persisted storage, cache cleared, `/me` and `/plans` refused for a kid, wrong PIN message, lockout message, no-PIN flow), creator create → publish → visible to parents → delete, and a rejected token ending the session.
+- **Not verified:** the rendered UI itself (layout, Base UI dialog/tabs/button behaviour, mobile widths). Nobody has clicked through it yet.
+- **Still open from block 4:** a creator can unpublish a book with buyers (rule 2 before rule 3). The dashboard's Unpublish button exposes it.
