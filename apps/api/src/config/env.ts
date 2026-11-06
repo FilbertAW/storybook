@@ -3,6 +3,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  DATABASE_URL: z.string().default('file:./local.db'),
+  DATABASE_AUTH_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

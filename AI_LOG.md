@@ -21,3 +21,13 @@ The AI-usage slide is written from this file.
 - **Changed / rejected:** the Vite template shipped oxlint and TypeScript 7. Dropped oxlint for ESLint as chosen; pinned TypeScript to ~6.0.3 because `typescript-eslint` only supports TypeScript below 6.1.
 - **Not verified yet:** the Vercel entry (`handle(...)` + rewrite) has not run on Vercel; the live `/health` check needs the deploy.
 - **Verified locally:** typecheck, lint and tests pass; `curl /api/v1/health` returns `{"status":"ok"}`; web builds.
+
+## Block 2 — Schema and seed (production half waits on Turso)
+
+- **Prompt:** skip the deploy for now and start block 2.
+- **Result:** Drizzle schema for the 8 tables (`apps/api/src/db/schema.ts`), initial migration `0000_init.sql`, `createDb` client, `migrateDb`, `seedDatabase(db, now)`, a `db:*` CLI (`migrate`, `seed`, `setup`), `hashPin` (scrypt, `node:crypto`), seed content (`seed-data.ts`), `DATABASE_URL` and `DATABASE_AUTH_TOKEN` env vars.
+- **Seed:** 5 users (parents A/B/C, creators Sari and Budi), 1 plan, 8 books (6 published, 1 draft, 1 archived), 64 pages. A owns a published book; B has an active subscription; C has a subscription that ended 10 days ago (row still `active`, since expiry is lazy) and owns the archived book. Demo PIN `1234` for A and B; C has no PIN to demo `PIN_NOT_SET`.
+- **Beyond the plan's table (constraints only, no new columns):** CHECKs for `age_min <= age_max`, `page_number >= 1`, `orders.amount_idr > 0`, `current_period_end > current_period_start`. The plan's separate `purchases (user_id)` index is skipped: the unique `(user_id, book_id)` index already serves it.
+- **Changed / rejected:** my first constraint tests used bare `toThrow()`, which would pass for the wrong error; rewrote them to assert the exact SQLite message after checking each fails for the intended reason.
+- **Verified:** typecheck, lint, 13 tests pass; migrate + seed on a local file; reseed is repeatable; FK enforcement and cascade work on libSQL.
+- **Not verified:** migrate/seed against Turso (no account yet).
