@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { subscriptionSummarySchema } from './checkout';
 
 export const roleSchema = z.enum(['parent', 'creator']);
 export type Role = z.infer<typeof roleSchema>;
@@ -28,7 +29,12 @@ export type SetPinRequest = z.infer<typeof setPinRequestSchema>;
 export const parentUnlockRequestSchema = z.object({ pin: pinSchema });
 export type ParentUnlockRequest = z.infer<typeof parentUnlockRequestSchema>;
 
-export const meResponseSchema = z.object({ user: userSchema, pinSet: z.boolean() });
+export const meResponseSchema = z.object({
+  user: userSchema,
+  pinSet: z.boolean(),
+  subscription: subscriptionSummarySchema,
+  ownedBookIds: z.array(z.string()),
+});
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
 export const setPinResponseSchema = z.object({ pinSet: z.literal(true) });

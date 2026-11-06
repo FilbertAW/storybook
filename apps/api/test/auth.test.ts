@@ -114,7 +114,6 @@ describe('Kid mode', () => {
 
   it('lets a kid token past the guard on the read and event paths', async () => {
     const kid = await t.kidToken(PARENT_A);
-    // The endpoints themselves arrive with the access rules; the guard must not be what stops them.
     for (const [method, path] of [
       ['GET', '/books'],
       ['GET', '/books/some-id'],
@@ -123,7 +122,7 @@ describe('Kid mode', () => {
       ['POST', '/events'],
     ] as const) {
       const res = await t.request(path, { method, token: kid, json: {} });
-      expect(res.body.error.code, `${method} ${path}`).not.toBe('KID_MODE_FORBIDDEN');
+      expect(res.body?.error?.code, `${method} ${path}`).not.toBe('KID_MODE_FORBIDDEN');
     }
   });
 

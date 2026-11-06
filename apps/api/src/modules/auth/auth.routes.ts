@@ -33,9 +33,7 @@ export function sessionRoutes(service: AuthService) {
 }
 
 export function meRoutes(service: AuthService) {
-  return new Hono<AppEnv>()
-    .get('/', (c) => c.json(service.me(c.get('user'))))
-    .put(
+  return new Hono<AppEnv>().put(
       '/pin',
       requireRole('parent'),
       zValidator('json', setPinRequestSchema, validationHook),
@@ -43,5 +41,5 @@ export function meRoutes(service: AuthService) {
         const { pin, currentPin } = c.req.valid('json');
         return c.json(await service.setPin(c.get('user'), pin, currentPin));
       },
-    );
+  );
 }

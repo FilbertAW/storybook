@@ -6,6 +6,11 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('file:./local.db'),
   DATABASE_AUTH_TOKEN: z.string().optional(),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters.'),
+  // Mounts POST /dev/clock. Development only; the offset does not survive serverless invocations.
+  ENABLE_DEV_CLOCK: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

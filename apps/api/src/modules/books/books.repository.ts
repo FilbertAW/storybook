@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, inArray, lte, or, sql } from 'drizzle-orm';
 import type { BookPageInput } from '@storylib/shared';
 import type { Db } from '../../db/client';
 import { bookPages, books, events, orders } from '../../db/schema';
@@ -36,7 +36,40 @@ export class BooksRepository {
     return row;
   }
 
-  getPages(bookId: string) {
+  async findById(id: string) {
+    const [row] = await this.db.select(bookWithCount).from(books).where(eq(books.id, id));
+    return row;
+  }
+
+  // Published books, plus archived ones the reader bought. Drafts never appear.
+  // Whether each book is readable in full is decided afterwards by resolveAccess.
+  listCatalog(filter: { purchasedBookIds: string[]; q?: string; age?: number }) {
+    const retired =
+      filter.purchasedBookIds.length > 0
+        ? and(eq(books.status, 'archived'), inArray(books.id, filter.purchasedBookIds))
+        : undefined;
+    const conditions = [or(eq(books.status, 'published'), retired)];
+    if (filter.q) {
+      const pattern = `%${filter.q.toLowerCase().replace(/[\\%_]/g, '\\$&')}%`;
+      conditions.push(
+        or(
+          sql`lower(${books.title}) like ${pattern} escape '\\'`,
+          sql`lower(${books.authorName}) like ${pattern} escape '\\'`,
+        ),
+      );
+    }
+    if (filter.age !== undefined) {
+      conditions.push(sql`${books.ageMin} <= ${filter.age} and ${books.ageMax} >= ${filter.age}`);
+    }
+    return this.db
+      .select(bookWithCount)
+      .from(books)
+      .where(and(...conditions))
+      .orderBy(desc(books.createdAt), asc(books.id));
+  }
+
+  // `limit` is applied in SQL so a page the reader may not see is never loaded.
+  getPages(bookId: string, limit?: number) {
     return this.db
       .select({
         pageNumber: bookPages.pageNumber,
@@ -44,8 +77,24 @@ export class BooksRepository {
         imageUrl: bookPages.imageUrl,
       })
       .from(bookPages)
-      .where(eq(bookPages.bookId, bookId))
+      .where(
+        limit === undefined
+          ? eq(bookPages.bookId, bookId)
+          : and(eq(bookPages.bookId, bookId), lte(bookPages.pageNumber, limit)),
+      )
       .orderBy(asc(bookPages.pageNumber));
+  }
+
+  async getPage(bookId: string, pageNumber: number) {
+    const [row] = await this.db
+      .select({
+        pageNumber: bookPages.pageNumber,
+        text: bookPages.text,
+        imageUrl: bookPages.imageUrl,
+      })
+      .from(bookPages)
+      .where(and(eq(bookPages.bookId, bookId), eq(bookPages.pageNumber, pageNumber)));
+    return row;
   }
 
   insertWithPages(book: NewBook, pages: BookPageInput[]): Promise<string> {

@@ -1,4 +1,4 @@
-import type { AuthResponse, MeResponse, SetPinResponse, UserDto } from '@storylib/shared';
+import type { AuthResponse, SetPinResponse, UserDto } from '@storylib/shared';
 import type { Scope, UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
@@ -45,10 +45,6 @@ export class AuthService {
     }
     await this.users.setPin(user.id, hashPin(pin));
     return { pinSet: true };
-  }
-
-  me(user: UserRow): MeResponse {
-    return { user: toUserDto(user), pinSet: user.pinHash !== null };
   }
 
   private async session(user: UserRow, scope: Scope): Promise<AuthResponse> {

@@ -1,8 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { createApp } from '../src/app';
 import { createDb } from '../src/db/client';
 import { migrateDb } from '../src/db/migrate';
 import { seedDatabase } from '../src/db/seed';
 import { DEMO_PIN } from '../src/db/seed-data';
+import { books, users } from '../src/db/schema';
 import type { Clock } from '../src/shared/clock';
 
 export { DEMO_PIN };
@@ -23,6 +25,7 @@ interface RequestOptions {
   method?: string;
   token?: string;
   json?: unknown;
+  headers?: Record<string, string>;
 }
 
 // A fresh in-memory database, migrated and seeded, behind the real app.
@@ -33,8 +36,8 @@ export async function buildTestApp() {
   await seedDatabase(db, clock.now());
   const app = createApp({ corsOrigin: WEB_ORIGIN, jwtSecret: JWT_SECRET, db, clock });
 
-  async function request(path: string, { method = 'GET', token, json }: RequestOptions = {}) {
-    const headers: Record<string, string> = {};
+  async function request(path: string, { method = 'GET', token, json, headers: extra }: RequestOptions = {}) {
+    const headers: Record<string, string> = { ...extra };
     if (token) headers.Authorization = `Bearer ${token}`;
     const hasBody = json !== undefined && method !== 'GET' && method !== 'HEAD';
     if (hasBody) headers['Content-Type'] = 'application/json';
@@ -43,8 +46,10 @@ export async function buildTestApp() {
       headers,
       body: hasBody ? JSON.stringify(json) : undefined,
     });
+    // Some answers (204) have no body.
+    const text = await res.text();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { status: res.status, body: (await res.json()) as any };
+    return { status: res.status, body: (text ? JSON.parse(text) : null) as any };
   }
 
   async function login(email: string): Promise<string> {
@@ -57,7 +62,18 @@ export async function buildTestApp() {
     return body.token as string;
   }
 
-  return { app, db, clock, request, login, kidToken };
+  async function bookId(title: string): Promise<string> {
+    const [row] = await db.select({ id: books.id }).from(books).where(eq(books.title, title));
+    if (!row) throw new Error(`No book titled ${title}`);
+    return row.id;
+  }
+
+  async function userRow(email: string) {
+    const [row] = await db.select().from(users).where(eq(users.email, email));
+    return row!;
+  }
+
+  return { app, db, clock, request, login, kidToken, bookId, userRow };
 }
 
 export type TestApp = Awaited<ReturnType<typeof buildTestApp>>;

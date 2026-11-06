@@ -49,3 +49,28 @@ The AI-usage slide is written from this file.
 - **Bug found by tests:** `pageCount` was always 0. Drizzle drops the table qualifier in a single-table select, so `${books.id}` inside the subquery resolved to `book_pages.id`. Fixed with an explicit `"books"."id"`.
 - **Rejected / changed:** my first draft of the auth test file contained a nonsensical "user no longer exists" test; replaced with a forged-for-unknown-user token. A helper sent a body on GET requests; fixed.
 - **Verified:** 71 tests, typecheck, lint; a real server smoke test with curl (login, Kid mode, wrong PIN, role gating, creator list).
+
+## Block 4 — Access and checkout
+
+- **Prompt:** start block 4.
+- **Asked first (plan conflicts, per CLAUDE.md):**
+  1. The plan says `POST /orders` is for parents, but also expects a creator buying their own book to get `409 ALREADY_OWNED`. Chose parents only: creators get 403 `FORBIDDEN_ROLE` on `/plans`, `/orders` and `/subscriptions/*`. The ownership check stays in `CheckoutService` and is tested at service level.
+  2. The dev clock endpoint (a plan cut-line item). Chose an env-gated in-process offset (`ENABLE_DEV_CLOCK`). It works on a local server but resets between serverless invocations, so it is unreliable on Vercel.
+- **Result:**
+  - `resolveAccess(subject, book, now)`: a pure function, six rules in the plan's order. `AccessService` loads a subject (purchased book ids + the active-marked subscription row) in two queries per request, so a list of N books costs the same as one.
+  - Reads: `GET /books` (filters `q`, `age`, `access`), `/books/:id`, `/books/:id/pages`, `/books/:id/pages/:n`. The preview limit is applied in the SQL, so a page the reader may not see is never loaded. Kid tokens get full-access books only and no `priceIdr`; a locked book is a 404 for a kid, not a preview.
+  - Checkout: `GET /plans`, `POST /orders` (+ `Idempotency-Key`), `POST /orders/:id/pay`, `GET /orders`, `POST /subscriptions/current/cancel`. `PaymentGateway` interface with `MockPaymentGateway`, injected through `createApp`.
+  - `GET /me` now carries the subscription summary and owned book ids (moved to `modules/account`). `POST /events` (204). `GET/POST /dev/clock` behind the flag.
+- **Decisions made without asking (open to change):**
+  - Idempotency: a replay returns the original order (200 instead of 201) before any rule runs; the same key with a different book or plan is `400 VALIDATION_ERROR`. Keys are scoped per user.
+  - Concurrency: `onConflictDoNothing` on `(user, key)` for racing creates; `settlePaid` claims the order with a conditional `pending → paid` update first, then grants in the same transaction. A second concurrent payment finds nothing to claim.
+  - If two pending orders exist for the same book or subscription, the second to be paid gets `409 ALREADY_OWNED` / `ALREADY_SUBSCRIBED`, rolls back, and the order is closed as failed.
+  - The server logs an `order_paid` event inside the grant transaction (the plan's paywall-conversion metric needs it).
+  - Order of checks when buying a book: not found (404) → already owned (409) → not published (409 `BOOK_NOT_PURCHASABLE`) → overlap acknowledgement (409). An owned archived book is `ALREADY_OWNED`, not "not purchasable".
+  - `subscriptionOverlapAck` is stored true only when there really was an active subscription.
+  - A subscription row still marked `active` past its end is flipped to `expired` inside the grant transaction (lazy expiry), so the partial unique index stays correct.
+  - `GET /books` for a creator shows the same published catalog as a parent (their own books as `owner`, no drafts); their drafts are on `/creator/books` and openable by id.
+  - `POST /events` rejects an unknown `bookId` with 404 rather than failing on the foreign key.
+- **Gap found in the plan (not changed, needs a decision):** rule 2 (draft → not found) runs before rule 3 (purchased → full). A creator can `PATCH` a book with buyers back to `draft`, and the buyers then get 404 on a book they paid for, while `/me` still lists it as owned. That contradicts "a purchase is ownership". Verified with a one-off probe. No test asserts it.
+- **Verified:** 187 tests (resolveAccess unit tests for every rule and boundary; catalog, kid, pages and entitlement; checkout, idempotency and races; subscription and cancel; events, `/me`, dev clock), typecheck, lint, and a curl walk-through on a live server. Mutation check: breaking the preview SQL limit turns two tests red.
+- **Not verified:** the Turso half of the plan's "done" signal, and the Vercel entry.

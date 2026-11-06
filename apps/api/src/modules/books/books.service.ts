@@ -1,4 +1,10 @@
 import type {
+  Access,
+  BookPageResponse,
+  BookPagesResponse,
+  BookSummaryDto,
+  BooksQuery,
+  BooksResponse,
   CreateBookRequest,
   CreatorBookDto,
   CreatorBookWithPagesDto,
@@ -6,9 +12,10 @@ import type {
   DeleteBookResponse,
   UpdateBookRequest,
 } from '@storylib/shared';
-import type { UserRow } from '../../shared/app-env';
+import type { Scope, UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
+import type { AccessService } from '../access/access.service';
 import type { BookRow, BooksRepository } from './books.repository';
 
 const DEFAULT_PREVIEW_PAGES = 2;
@@ -35,11 +42,81 @@ function toDto(row: BookRow): CreatorBookDto {
   };
 }
 
+// A kid sees only books the family can read in full, and never a price.
+function toSummary(row: BookRow, access: Access, scope: Scope): BookSummaryDto {
+  return {
+    id: row.id,
+    title: row.title,
+    authorName: row.authorName,
+    description: row.description,
+    coverUrl: row.coverUrl,
+    ageMin: row.ageMin,
+    ageMax: row.ageMax,
+    ...(scope === 'kid' ? {} : { priceIdr: row.priceIdr }),
+    status: row.status,
+    previewPageCount: row.previewPageCount,
+    pageCount: row.pageCount,
+    access,
+  };
+}
+
 export class BookService {
   constructor(
     private readonly books: BooksRepository,
+    private readonly access: AccessService,
     private readonly clock: Clock,
   ) {}
+
+  async list(user: UserRow, scope: Scope, query: BooksQuery): Promise<BooksResponse> {
+    const subject = await this.access.subjectFor(user);
+    const rows = await this.books.listCatalog({
+      purchasedBookIds: [...subject.purchasedBookIds],
+      q: query.q,
+      age: query.age,
+    });
+    const items: BookSummaryDto[] = [];
+    for (const row of rows) {
+      const access = this.access.resolve(subject, row);
+      if (!access) continue;
+      if (scope === 'kid' && access.level !== 'full') continue;
+      if (query.access === 'full' && access.level !== 'full') continue;
+      if (query.access === 'locked' && access.level !== 'preview') continue;
+      items.push(toSummary(row, access, scope));
+    }
+    return { books: items };
+  }
+
+  async detail(user: UserRow, scope: Scope, id: string): Promise<BookSummaryDto> {
+    const { book, access } = await this.visible(user, scope, id);
+    return toSummary(book, access, scope);
+  }
+
+  async pages(user: UserRow, scope: Scope, id: string): Promise<BookPagesResponse> {
+    const { book, access } = await this.visible(user, scope, id);
+    const shown = this.shownPages(book, access);
+    const pages = await this.books.getPages(id, access.level === 'full' ? undefined : shown);
+    return {
+      pages,
+      totalPages: book.pageCount,
+      lockedFrom: shown < book.pageCount ? shown + 1 : null,
+      access,
+    };
+  }
+
+  async page(user: UserRow, scope: Scope, id: string, pageNumber: number): Promise<BookPageResponse> {
+    const { book, access } = await this.visible(user, scope, id);
+    if (pageNumber < 1 || pageNumber > book.pageCount) {
+      throw new AppError('NOT_FOUND', 'Page not found.');
+    }
+    if (pageNumber > this.shownPages(book, access)) {
+      throw new AppError('ENTITLEMENT_REQUIRED', 'Buy this book or subscribe to read this page.', {
+        bookId: id,
+      });
+    }
+    const page = await this.books.getPage(id, pageNumber);
+    if (!page) throw new AppError('NOT_FOUND', 'Page not found.');
+    return { page, totalPages: book.pageCount, access };
+  }
 
   async listOwn(creator: UserRow): Promise<CreatorBooksResponse> {
     const rows = await this.books.listByCreator(creator.id);
@@ -88,6 +165,20 @@ export class BookService {
     }
     await this.books.delete(id);
     return { result: 'deleted' };
+  }
+
+  // A book the reader may not know about is "not found", never "forbidden".
+  private async visible(user: UserRow, scope: Scope, id: string) {
+    const book = await this.books.findById(id);
+    const access = book ? this.access.resolve(await this.access.subjectFor(user), book) : null;
+    if (!book || !access || (scope === 'kid' && access.level !== 'full')) {
+      throw new AppError('NOT_FOUND', 'Book not found.');
+    }
+    return { book, access };
+  }
+
+  private shownPages(book: BookRow, access: Access): number {
+    return access.level === 'full' ? book.pageCount : Math.min(book.previewPageCount, book.pageCount);
   }
 
   // Another creator's book is reported as missing, so its id is never confirmed.
