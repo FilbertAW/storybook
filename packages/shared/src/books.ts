@@ -1,0 +1,69 @@
+import { z } from 'zod';
+
+export const bookStatusSchema = z.enum(['draft', 'published', 'archived']);
+export type BookStatus = z.infer<typeof bookStatusSchema>;
+
+const bookPageInputSchema = z.object({
+  text: z.string().trim().min(1).max(500),
+  imageUrl: z.url(),
+});
+export type BookPageInput = z.infer<typeof bookPageInputSchema>;
+
+const bookFields = {
+  title: z.string().trim().min(1).max(120),
+  authorName: z.string().trim().min(1).max(120),
+  description: z.string().trim().min(1).max(1000),
+  coverUrl: z.url(),
+  ageMin: z.number().int().min(0).max(12),
+  ageMax: z.number().int().min(0).max(12),
+  priceIdr: z.number().int().positive(),
+  previewPageCount: z.number().int().min(0),
+  pages: z.array(bookPageInputSchema).min(1).max(40),
+};
+
+const ageRangeIsValid = (b: { ageMin?: number; ageMax?: number }) =>
+  b.ageMin === undefined || b.ageMax === undefined || b.ageMin <= b.ageMax;
+const ageRangeIssue = { message: 'ageMin must not be greater than ageMax.', path: ['ageMax'] };
+
+// authorName defaults to the creator's name and previewPageCount to 2.
+export const createBookRequestSchema = z
+  .object({ ...bookFields, authorName: bookFields.authorName.optional(), previewPageCount: bookFields.previewPageCount.optional() })
+  .refine(ageRangeIsValid, ageRangeIssue);
+export type CreateBookRequest = z.infer<typeof createBookRequestSchema>;
+
+// Archiving happens through DELETE, so a PATCH can only move between draft and published.
+export const updateBookRequestSchema = z
+  .object({ ...bookFields, status: z.enum(['draft', 'published']) })
+  .partial()
+  .refine(ageRangeIsValid, ageRangeIssue);
+export type UpdateBookRequest = z.infer<typeof updateBookRequestSchema>;
+
+export const creatorBookSchema = z.object({
+  id: z.string(),
+  creatorId: z.string(),
+  title: z.string(),
+  authorName: z.string(),
+  description: z.string(),
+  coverUrl: z.string(),
+  ageMin: z.number(),
+  ageMax: z.number(),
+  priceIdr: z.number(),
+  status: bookStatusSchema,
+  previewPageCount: z.number(),
+  pageCount: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  archivedAt: z.string().nullable(),
+});
+export type CreatorBookDto = z.infer<typeof creatorBookSchema>;
+
+export const creatorBookWithPagesSchema = creatorBookSchema.extend({
+  pages: z.array(z.object({ pageNumber: z.number(), text: z.string(), imageUrl: z.string() })),
+});
+export type CreatorBookWithPagesDto = z.infer<typeof creatorBookWithPagesSchema>;
+
+export const creatorBooksResponseSchema = z.object({ books: z.array(creatorBookSchema) });
+export type CreatorBooksResponse = z.infer<typeof creatorBooksResponseSchema>;
+
+export const deleteBookResponseSchema = z.object({ result: z.enum(['deleted', 'archived']) });
+export type DeleteBookResponse = z.infer<typeof deleteBookResponseSchema>;
