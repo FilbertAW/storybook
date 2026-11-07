@@ -86,6 +86,7 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [values, setValues] = useState(initial)
+  const wasPublished = initial.published
   const [problems, setProblems] = useState<string[]>([])
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => setValues((v) => ({ ...v, [key]: value }))
@@ -200,8 +201,14 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
         </Card>
 
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={values.published} onChange={(e) => set('published', e.target.checked)} className="size-4" />
-          Published (visible in the catalog)
+          <input
+            type="checkbox"
+            checked={values.published}
+            disabled={wasPublished}
+            onChange={(e) => set('published', e.target.checked)}
+            className="size-4"
+          />
+          {wasPublished ? 'Published (cannot be unpublished; archive it from the dashboard instead)' : 'Publish now (visible in the catalog, cannot be undone)'}
         </label>
 
         {problems.length > 0 && (

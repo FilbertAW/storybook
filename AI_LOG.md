@@ -93,3 +93,13 @@ The AI-usage slide is written from this file.
 - **Verification (no browser tooling was available):** typecheck, lint, production build, and the Vite dev server compiling every screen. A throwaway test (not committed: it needs a test runner in the web package) ran the real frontend client, zod parsing, session store and query cache against the real API, in-process, through all three "done when" journeys: Locked → pay → reading (incl. failed payment, retry, idempotent replay), subscribed purchase with the overlap warning, Kid mode hand-over and PIN return (parent token gone from persisted storage, cache cleared, `/me` and `/plans` refused for a kid, wrong PIN message, lockout message, no-PIN flow), creator create → publish → visible to parents → delete, and a rejected token ending the session.
 - **Not verified:** the rendered UI itself (layout, Base UI dialog/tabs/button behaviour, mobile widths). Nobody has clicked through it yet.
 - **Still open from block 4:** a creator can unpublish a book with buyers (rule 2 before rule 3). The dashboard's Unpublish button exposes it.
+
+## Follow-up: publishing is one-way
+
+**Prompt:** Asked about the unpublish gap (a creator could unpublish a book with buyers, and buyers then got 404). I proposed refusing unpublish; the user argued draft may not be needed, I pushed back that it still lets a creator check a book before it goes live and that books with sales can't be deleted anyway. The user decided: keep draft only as the first state; once published, a book never goes back to draft.
+
+**Produced:** `BookService.update` rejects `published → draft` with `VALIDATION_ERROR` (400). The dashboard shows Publish only for drafts (Unpublish removed). The book form disables the publish checkbox for an already-published book. The old "unpublishes back to draft" test now asserts the rejection and that the book stays published. Retiring a published book is archive (delete archives when orders exist).
+
+**Rejected:** removing draft entirely (would change the plan's data model, rule 2 and the seed). Refusing only when orders exist (a one-way rule is simpler and has no race with a purchase landing right after the check).
+
+**Also:** migrated and seeded the Turso database (`storylib`) from a gitignored `apps/api/.env.turso`. README added.

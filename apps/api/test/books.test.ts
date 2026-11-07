@@ -133,10 +133,13 @@ describe('PATCH /books/:id', () => {
     expect(new Date(book.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(book.createdAt).getTime());
   });
 
-  it('unpublishes back to draft', async () => {
+  it('refuses to send a published book back to draft', async () => {
     const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');
     const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { status: 'draft' } });
-    expect(res.body.status).toBe('draft');
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    const after = await t.request(`/books/${id}`, { token: sari });
+    expect(after.body.status).toBe('published');
   });
 
   it('leaves pages alone when none are sent', async () => {

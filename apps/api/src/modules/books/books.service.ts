@@ -146,6 +146,10 @@ export class BookService {
     if (book.status === 'archived') {
       throw new AppError('VALIDATION_ERROR', 'Archived books can no longer be edited.');
     }
+    // Buyers may already own a published book, so publishing is one-way; archive it to retire it.
+    if (book.status === 'published' && input.status === 'draft') {
+      throw new AppError('VALIDATION_ERROR', 'A published book cannot go back to draft. Archive it instead.');
+    }
     const { pages, ...changes } = input;
     const ageMin = changes.ageMin ?? book.ageMin;
     const ageMax = changes.ageMax ?? book.ageMax;

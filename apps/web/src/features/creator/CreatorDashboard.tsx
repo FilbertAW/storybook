@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CreatorBookDto } from '@storylib/shared'
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { creatorApi } from '@/api/endpoints'
@@ -84,15 +84,16 @@ export function CreatorDashboard() {
                     <Button variant="outline" size="sm" render={<Link to={`/creator/${b.id}/edit`} />} nativeButton={false}>
                       <Pencil /> Edit
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={setStatus.isPending}
-                      onClick={() => setStatus.mutate({ id: b.id, status: b.status === 'published' ? 'draft' : 'published' })}
-                    >
-                      {b.status === 'published' ? <EyeOff /> : <Eye />}
-                      {b.status === 'published' ? 'Unpublish' : 'Publish'}
-                    </Button>
+                    {b.status === 'draft' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={setStatus.isPending}
+                        onClick={() => setStatus.mutate({ id: b.id, status: 'published' })}
+                      >
+                        <Eye /> Publish
+                      </Button>
+                    )}
                   </>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setDeleting(b)}>
