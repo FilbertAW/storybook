@@ -26,7 +26,7 @@ export interface SeedBook {
   ageMin: number;
   ageMax: number;
   priceIdr: number;
-  status: 'draft' | 'published' | 'archived';
+  status: 'published' | 'archived';
   pages: string[];
 }
 
@@ -91,26 +91,6 @@ export const SEED_BOOKS: SeedBook[] = [
       'At the top, she cut the cake into many pieces.',
       'She shared it with the owls, the crickets and a sleepy cat.',
       'The moon glowed brighter than ever, and Mimi smiled all the way home.',
-    ],
-  }),
-  book({
-    slug: 'bobo-share',
-    creator: 'creatorSari',
-    title: 'Bobo Learns to Share',
-    description: 'A new story about a little bear and his very favourite toy truck. Still being written.',
-    ageMin: 2,
-    ageMax: 4,
-    priceIdr: 15_000,
-    status: 'draft',
-    pages: [
-      'Bobo had a bright red toy truck. He loved it more than honey.',
-      'When Mina came to play, Bobo hugged the truck tight.',
-      '"Mine!" said Bobo. Mina looked sad.',
-      'Bobo felt a funny, heavy feeling in his tummy.',
-      'He thought for a moment, then held out the truck.',
-      '"Let us drive it together," said Bobo.',
-      'Vroom, vroom! Two friends were twice the fun.',
-      'The heavy feeling went away, and the truck went round and round.',
     ],
   }),
   book({

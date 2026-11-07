@@ -25,7 +25,7 @@ CREATE TABLE `books` (
 	`updated_at` integer NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`creator_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "books_status_check" CHECK("books"."status" in ('draft', 'published', 'archived')),
+	CONSTRAINT "books_status_check" CHECK("books"."status" in ('published', 'archived')),
 	CONSTRAINT "books_price_check" CHECK("books"."price_idr" > 0),
 	CONSTRAINT "books_preview_check" CHECK("books"."preview_page_count" >= 0),
 	CONSTRAINT "books_age_check" CHECK("books"."age_min" <= "books"."age_max")

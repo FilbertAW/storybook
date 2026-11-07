@@ -9,7 +9,7 @@ import {
 import { bookPages, books } from '../src/db/schema';
 import { buildTestApp, newBook, type TestApp } from './helpers';
 
-const SARI = 'sari@example.com'; // 3 published + 1 draft
+const SARI = 'sari@example.com'; // 3 published
 const BUDI = 'budi@example.com'; // 3 published + 1 archived
 const PARENT_A = 'parent.a@example.com';
 
@@ -35,10 +35,10 @@ async function bookIdByTitle(token: string, title: string) {
 }
 
 describe('GET /creator/books', () => {
-  it('lists the creator\'s own books in every status, with page counts', async () => {
+  it('lists the creator\'s own books in own books, with page counts', async () => {
     const mine = await listTitles(sari);
-    expect(mine).toHaveLength(4);
-    expect(new Set(mine.map((b) => b.status))).toEqual(new Set(['published', 'draft']));
+    expect(mine).toHaveLength(3);
+    expect(mine.every((b) => b.status === 'published')).toBe(true);
     expect(mine.every((b) => b.pageCount === 8)).toBe(true);
     mine.forEach((b) => creatorBookSchema.parse(b));
 
@@ -59,11 +59,11 @@ describe('GET /creator/books', () => {
 });
 
 describe('POST /books', () => {
-  it('creates a draft with its pages, defaulting author and preview count', async () => {
+  it('creates a published book with its pages, defaulting author and preview count', async () => {
     const res = await t.request('/books', { method: 'POST', token: sari, json: newBook() });
     expect(res.status).toBe(201);
     const book = creatorBookWithPagesSchema.parse(res.body);
-    expect(book.status).toBe('draft');
+    expect(book.status).toBe('published');
     expect(book.authorName).toBe('Sari Wulandari');
     expect(book.previewPageCount).toBe(2);
     expect(book.pageCount).toBe(2);
@@ -105,41 +105,31 @@ describe('POST /books', () => {
     const res = await t.request('/books', {
       method: 'POST',
       token: sari,
-      json: newBook({ status: 'published', creatorId: 'someone-else' }),
+      json: newBook({ status: 'archived', creatorId: 'someone-else' }),
     });
     expect(res.status).toBe(201);
-    expect(res.body.status).toBe('draft');
+    expect(res.body.status).toBe('published');
     expect(res.body.creatorId).not.toBe('someone-else');
   });
 });
 
 describe('PATCH /books/:id', () => {
-  it('edits fields, replaces pages and publishes', async () => {
-    const id = await bookIdByTitle(sari, 'Bobo Learns to Share'); // seeded draft
+  it('edits fields, replaces pages', async () => {
+    const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');
     const res = await t.request(`/books/${id}`, {
       method: 'PATCH',
       token: sari,
       json: {
-        title: 'Bobo Shares',
+        title: 'Kiko Shines',
         priceIdr: 17_500,
-        status: 'published',
         pages: [{ text: 'Only one page now.', imageUrl: 'https://example.com/only.png' }],
       },
     });
     expect(res.status).toBe(200);
     const book = creatorBookWithPagesSchema.parse(res.body);
-    expect(book).toMatchObject({ title: 'Bobo Shares', priceIdr: 17_500, status: 'published', pageCount: 1 });
+    expect(book).toMatchObject({ title: 'Kiko Shines', priceIdr: 17_500, status: 'published', pageCount: 1 });
     expect(book.pages).toHaveLength(1);
     expect(new Date(book.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(book.createdAt).getTime());
-  });
-
-  it('refuses to send a published book back to draft', async () => {
-    const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');
-    const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { status: 'draft' } });
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION_ERROR');
-    const after = await t.request(`/books/${id}`, { token: sari });
-    expect(after.body.status).toBe('published');
   });
 
   it('leaves pages alone when none are sent', async () => {
@@ -150,9 +140,9 @@ describe('PATCH /books/:id', () => {
 
   it('cannot archive through PATCH, nor change the owner', async () => {
     const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');
-    expect((await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { status: 'archived' } })).status).toBe(400);
-    const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { creatorId: 'x' } });
+    const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { status: 'archived', creatorId: 'x' } });
     expect(res.status).toBe(200);
+    expect(res.body.status).toBe('published');
     expect(res.body.creatorId).not.toBe('x');
   });
 
@@ -193,7 +183,8 @@ describe('PATCH /books/:id', () => {
 
 describe('DELETE /books/:id', () => {
   it('hard-deletes a book with no orders, pages included', async () => {
-    const id = await bookIdByTitle(sari, 'Bobo Learns to Share'); // draft, never ordered
+    const created = await t.request('/books', { method: 'POST', token: sari, json: newBook() });
+    const id = created.body.id as string; // never ordered
     const res = await t.request(`/books/${id}`, { method: 'DELETE', token: sari });
     expect(res.status).toBe(200);
     expect(deleteBookResponseSchema.parse(res.body).result).toBe('deleted');

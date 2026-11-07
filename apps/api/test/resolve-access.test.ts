@@ -29,24 +29,13 @@ const subscription = (currentPeriodEnd: number, cancelAtPeriodEnd = false): Subs
 
 describe('resolveAccess, first match wins', () => {
   describe('1. creator of the book', () => {
-    it.each(['draft', 'published', 'archived'] as const)('has full access to their own %s book', (status) => {
+    it.each(['published', 'archived'] as const)('has full access to their own %s book', (status) => {
       const result = resolveAccess(subject({ userId: 'creator' }), book({ status }), NOW);
       expect(result).toEqual({ level: 'full', reason: 'owner' });
     });
   });
 
-  describe('2. draft', () => {
-    it('is not found for everyone else', () => {
-      expect(resolveAccess(subject(), book({ status: 'draft' }), NOW)).toBeNull();
-    });
-
-    it('stays hidden despite an active subscription', () => {
-      const s = subject({ subscription: subscription(NOW + 1000) });
-      expect(resolveAccess(s, book({ status: 'draft' }), NOW)).toBeNull();
-    });
-  });
-
-  describe('3. purchase', () => {
+  describe('2. purchase', () => {
     it('gives full access to a published book', () => {
       const s = subject({ purchasedBookIds: new Set(['book-1']) });
       expect(resolveAccess(s, book(), NOW)).toEqual({ level: 'full', reason: 'purchased' });
@@ -68,7 +57,7 @@ describe('resolveAccess, first match wins', () => {
     });
   });
 
-  describe('4. archived', () => {
+  describe('3. archived', () => {
     it('is not found for someone who did not buy it', () => {
       expect(resolveAccess(subject(), book({ status: 'archived' }), NOW)).toBeNull();
     });
@@ -79,7 +68,7 @@ describe('resolveAccess, first match wins', () => {
     });
   });
 
-  describe('5. active subscription', () => {
+  describe('4. active subscription', () => {
     it('gives full access while the period end is in the future', () => {
       const s = subject({ subscription: subscription(NOW + 1) });
       expect(resolveAccess(s, book(), NOW)).toEqual({ level: 'full', reason: 'subscription' });
@@ -108,7 +97,7 @@ describe('resolveAccess, first match wins', () => {
     });
   });
 
-  describe('6. otherwise', () => {
+  describe('5. otherwise', () => {
     it('gives preview access, reason locked', () => {
       expect(resolveAccess(subject(), book(), NOW)).toEqual({ level: 'preview', reason: 'locked' });
     });

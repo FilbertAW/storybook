@@ -28,7 +28,6 @@ interface FormValues {
   priceIdr: string
   previewPageCount: string
   pages: PageDraft[]
-  published: boolean
 }
 
 // Placeholder pictures so a new book can be filled in quickly; the creator can paste real URLs.
@@ -46,7 +45,6 @@ const blank = (): FormValues => ({
   priceIdr: '15000',
   previewPageCount: '2',
   pages: [newPage(), newPage()],
-  published: false,
 })
 
 export function BookFormPage() {
@@ -76,7 +74,6 @@ export function BookFormPage() {
         priceIdr: String(book.priceIdr),
         previewPageCount: String(book.previewPageCount),
         pages: pages.data.pages.map((p) => ({ text: p.text, imageUrl: p.imageUrl })),
-        published: book.status === 'published',
       }}
     />
   )
@@ -86,7 +83,6 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [values, setValues] = useState(initial)
-  const wasPublished = initial.published
   const [problems, setProblems] = useState<string[]>([])
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => setValues((v) => ({ ...v, [key]: value }))
@@ -95,10 +91,7 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
 
   const save = useMutation({
     mutationFn: async (body: ReturnType<typeof createBookRequestSchema.parse>) => {
-      const status = values.published ? 'published' : 'draft'
-      if (bookId) return creatorApi.update(bookId, { ...body, status })
-      const created = await creatorApi.create(body)
-      return values.published ? creatorApi.update(created.id, { status }) : created
+      return bookId ? creatorApi.update(bookId, body) : creatorApi.create(body)
     },
     onSuccess: async () => {
       await Promise.all([
@@ -200,17 +193,6 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
           </CardContent>
         </Card>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={values.published}
-            disabled={wasPublished}
-            onChange={(e) => set('published', e.target.checked)}
-            className="size-4"
-          />
-          {wasPublished ? 'Published (cannot be unpublished; archive it from the dashboard instead)' : 'Publish now (visible in the catalog, cannot be undone)'}
-        </label>
-
         {problems.length > 0 && (
           <Alert variant="destructive">
             <AlertTitle>Please fix these</AlertTitle>
@@ -227,7 +209,7 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
 
         <div className="flex gap-2">
           <Button type="submit" size="lg" disabled={save.isPending}>
-            {bookId ? 'Save changes' : values.published ? 'Create and publish' : 'Save draft'}
+            {bookId ? 'Save changes' : 'Publish book'}
           </Button>
           <Button type="button" size="lg" variant="ghost" render={<Link to="/creator" />} nativeButton={false}>
             Cancel

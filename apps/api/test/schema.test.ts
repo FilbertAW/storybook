@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 import { createDb, type Db } from '../src/db/client';
 import { migrateDb } from '../src/db/migrate';
 import { seedDatabase } from '../src/db/seed';
@@ -43,12 +43,11 @@ describe('seed', () => {
     const byStatus = await db.select({ status: books.status, n: count() }).from(books).groupBy(books.status);
     expect(Object.fromEntries(byStatus.map((r) => [r.status, r.n]))).toEqual({
       published: 6,
-      draft: 1,
       archived: 1,
     });
 
     const perBook = await db.select({ bookId: bookPages.bookId, n: count() }).from(bookPages).groupBy(bookPages.bookId);
-    expect(perBook).toHaveLength(8);
+    expect(perBook).toHaveLength(7);
     expect(perBook.every((r) => r.n >= 8)).toBe(true);
   });
 
@@ -164,9 +163,13 @@ describe('constraints the services will lean on', () => {
   });
 
   it('cascades pages when a book without orders is deleted', async () => {
-    const draft = await bookByTitle('Bobo Learns to Share');
-    await db.delete(books).where(eq(books.id, draft.id));
-    const left = await db.select().from(bookPages).where(eq(bookPages.bookId, draft.id));
+    const [unordered] = await db
+      .select({ id: books.id })
+      .from(books)
+      .where(sql`${books.id} not in (select book_id from orders where book_id is not null)`)
+      .limit(1);
+    await db.delete(books).where(eq(books.id, unordered!.id));
+    const left = await db.select().from(bookPages).where(eq(bookPages.bookId, unordered!.id));
     expect(left).toHaveLength(0);
   });
 

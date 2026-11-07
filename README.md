@@ -34,7 +34,7 @@ Log in with the email only (mock login, no password).
 | `parent.a@example.com` | parent | No subscription, owns a book, PIN `1234` |
 | `parent.b@example.com` | parent | Active subscription, PIN `1234` |
 | `parent.c@example.com` | parent | Expired subscription, owns an archived book, **no PIN set** |
-| `sari@example.com` | creator | Has published books and a draft |
+| `sari@example.com` | creator | Has published books |
 | `budi@example.com` | creator | Has published books |
 
 The demo parent PIN is **1234**. Entering Kid mode needs a PIN, so parent C is the "set a PIN first" flow. Five wrong PINs lock Kid-mode exit for five minutes.

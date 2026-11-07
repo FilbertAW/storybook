@@ -103,3 +103,11 @@ The AI-usage slide is written from this file.
 **Rejected:** removing draft entirely (would change the plan's data model, rule 2 and the seed). Refusing only when orders exist (a one-way rule is simpler and has no race with a purchase landing right after the check).
 
 **Also:** migrated and seeded the Turso database (`storylib`) from a gitignored `apps/api/.env.turso`. README added.
+
+## Follow-up: no draft state
+
+**Prompt:** The user decided drafts aren't needed: the app focuses on parents and kids, creators are secondary. A book is published when created, then can only be edited or deleted (archived if it has orders). This supersedes the one-way-draft change above.
+
+**Produced:** Removed `draft` from the status check, shared schemas, `resolveAccess` (rules now 5), the seed (Bobo Learns to Share removed), and the book service (create = published; PATCH no longer takes `status`). The dashboard lost its Publish button; the book form lost the publish checkbox ("Publish book"). `docs/PLAN.md`, `CLAUDE.md` and the README were updated to match. Regenerated the initial migration (`0000_exotic_george_stacy.sql`) since nothing is deployed yet. Tests: 180 pass (draft-only tests removed; delete and cascade tests now use an unordered published book).
+
+**Note:** the Turso database still has the old schema (with `draft` in its check). It needs its tables dropped and `db:setup` re-run; this was not done yet.

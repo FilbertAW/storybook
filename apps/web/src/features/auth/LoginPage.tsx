@@ -15,7 +15,7 @@ const DEMO_ACCOUNTS = [
   { email: 'parent.a@example.com', label: 'Parent A', note: 'No subscription · owns one book · PIN 1234' },
   { email: 'parent.b@example.com', label: 'Parent B', note: 'Active subscription · PIN 1234' },
   { email: 'parent.c@example.com', label: 'Parent C', note: 'Subscription ended · owns a retired book · no PIN yet' },
-  { email: 'sari@example.com', label: 'Sari (creator)', note: '3 published books and a draft' },
+  { email: 'sari@example.com', label: 'Sari (creator)', note: '3 published books' },
   { email: 'budi@example.com', label: 'Budi (creator)', note: '3 published books and a retired one' },
 ]
 

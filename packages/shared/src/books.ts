@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const bookStatusSchema = z.enum(['draft', 'published', 'archived']);
+export const bookStatusSchema = z.enum(['published', 'archived']);
 export type BookStatus = z.infer<typeof bookStatusSchema>;
 
 const bookPageInputSchema = z.object({
@@ -31,9 +31,9 @@ export const createBookRequestSchema = z
   .refine(ageRangeIsValid, ageRangeIssue);
 export type CreateBookRequest = z.infer<typeof createBookRequestSchema>;
 
-// Archiving happens through DELETE, so a PATCH can only move between draft and published.
+// A book is published when created; DELETE archives it when it has orders.
 export const updateBookRequestSchema = z
-  .object({ ...bookFields, status: z.enum(['draft', 'published']) })
+  .object(bookFields)
   .partial()
   .refine(ageRangeIsValid, ageRangeIssue);
 export type UpdateBookRequest = z.infer<typeof updateBookRequestSchema>;

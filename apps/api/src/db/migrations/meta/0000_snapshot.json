@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "012e90ce-dc01-42ba-9599-08edc67cf374",
+  "id": "c62c632a-003b-43ac-914b-f2ac05606be5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "book_pages": {
@@ -217,7 +217,7 @@
       "checkConstraints": {
         "books_status_check": {
           "name": "books_status_check",
-          "value": "\"books\".\"status\" in ('draft', 'published', 'archived')"
+          "value": "\"books\".\"status\" in ('published', 'archived')"
         },
         "books_price_check": {
           "name": "books_price_check",

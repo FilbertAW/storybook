@@ -132,7 +132,7 @@ export class BookService {
         creatorId: creator.id,
         authorName: authorName ?? creator.name,
         previewPageCount: previewPageCount ?? DEFAULT_PREVIEW_PAGES,
-        status: 'draft',
+        status: 'published',
         createdAt: now,
         updatedAt: now,
       },
@@ -145,10 +145,6 @@ export class BookService {
     const book = await this.owned(creator, id);
     if (book.status === 'archived') {
       throw new AppError('VALIDATION_ERROR', 'Archived books can no longer be edited.');
-    }
-    // Buyers may already own a published book, so publishing is one-way; archive it to retire it.
-    if (book.status === 'published' && input.status === 'draft') {
-      throw new AppError('VALIDATION_ERROR', 'A published book cannot go back to draft. Archive it instead.');
     }
     const { pages, ...changes } = input;
     const ageMin = changes.ageMin ?? book.ageMin;

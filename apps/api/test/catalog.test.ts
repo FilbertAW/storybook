@@ -16,7 +16,6 @@ const SARI = 'sari@example.com';
 const KIKO = 'Kiko the Little Firefly';
 const RAINY = 'The Rainy Day Parade';
 const MIMI = 'Mimi and the Moon Cake';
-const BOBO = 'Bobo Learns to Share'; // draft
 const KITE = 'The Lost Kite'; // archived
 
 let t: TestApp;
@@ -50,9 +49,8 @@ describe('GET /books', () => {
     books.forEach((b) => bookSummarySchema.parse(b));
   });
 
-  it('never lists a draft or a retired book the parent did not buy', async () => {
+  it('never lists a retired book the parent did not buy', async () => {
     const seen = titles(await list(PARENT_A));
-    expect(seen).not.toContain(BOBO);
     expect(seen).not.toContain(KITE);
   });
 
@@ -71,9 +69,8 @@ describe('GET /books', () => {
     expect(others.every((b) => b.access.reason === 'locked')).toBe(true);
   });
 
-  it('shows a creator the same catalog, with their own books as owner and no drafts', async () => {
+  it('shows a creator the same catalog, with their own books as owner', async () => {
     const books = await list(SARI);
-    expect(titles(books)).not.toContain(BOBO);
     expect(byTitle(books, KIKO).access).toEqual({ level: 'full', reason: 'owner' });
     expect(byTitle(books, 'A Boat Called Bintang').access.reason).toBe('locked');
   });
@@ -128,18 +125,6 @@ describe('GET /books/:id', () => {
       pageCount: 8,
       access: { level: 'preview', reason: 'locked' },
     });
-  });
-
-  it('404s a draft for a parent, and for a creator who does not own it', async () => {
-    const bobo = await t.bookId(BOBO);
-    expect((await t.request(`/books/${bobo}`, { token: await t.login(PARENT_A) })).status).toBe(404);
-    expect((await t.request(`/books/${bobo}`, { token: await t.login('budi@example.com') })).status).toBe(404);
-  });
-
-  it('lets the creator open their own draft', async () => {
-    const res = await t.request(`/books/${await t.bookId(BOBO)}`, { token: await t.login(SARI) });
-    expect(res.status).toBe(200);
-    expect(res.body.access).toEqual({ level: 'full', reason: 'owner' });
   });
 
   it('404s a retired book unless the reader bought it', async () => {
@@ -207,16 +192,9 @@ describe('GET /books/:id/pages', () => {
     expect(all.body.lockedFrom).toBeNull();
   });
 
-  it('404s a draft and a retired book the reader has no claim to', async () => {
+  it('404s a retired book the reader has no claim to', async () => {
     const token = await t.login(PARENT_A);
-    expect((await t.request(`/books/${await t.bookId(BOBO)}/pages`, { token })).status).toBe(404);
     expect((await t.request(`/books/${await t.bookId(KITE)}/pages`, { token })).status).toBe(404);
-  });
-
-  it('lets a creator read all of their own draft', async () => {
-    const res = await t.request(`/books/${await t.bookId(BOBO)}/pages`, { token: await t.login(SARI) });
-    expect(res.body.pages).toHaveLength(8);
-    expect(res.body.access.reason).toBe('owner');
   });
 });
 
@@ -251,8 +229,8 @@ describe('GET /books/:id/pages/:n', () => {
     }
   });
 
-  it('404s a draft page for a parent', async () => {
-    expect((await page(PARENT_A, BOBO, 1)).status).toBe(404);
+  it('404s a page of a retired book for a parent who did not buy it', async () => {
+    expect((await page(PARENT_A, KITE, 1)).status).toBe(404);
   });
 });
 

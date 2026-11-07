@@ -41,7 +41,7 @@ The payer and the reader are different people, so every screen answers two quest
 - **A purchase is ownership.** A bought book stays readable after a subscription ends and after the creator archives it.
 - **Subscribers may also buy a book, after a warning.** The warning says the subscription is not refunded and the book stays theirs after the subscription ends or the creator removes it. The server refuses the order until the warning is acknowledged; the subscription keeps its own dates, and owned status takes priority.
 - **Locked books stay visible to parents.** Cover, synopsis and the first 2 preview pages show in parent mode; the paywall sits at the end of the preview.
-- **Creators only touch their own books.** Draft and published states; deleting a book that has buyers archives it instead.
+- **Creators only touch their own books.** A book is published when created (no draft state: the product is for parents and kids, not an authoring tool); deleting a book that has buyers archives it instead.
 - **Price changes never touch past orders.** Each order stores the price paid.
 
 ### Assumptions
@@ -78,12 +78,11 @@ One function, `resolveAccess(user, book, now)`, decides access for every endpoin
 
 ### Resolution order (first match wins)
 
-1. **Creator of the book** → full access, reason `owner`, including drafts.
-2. **Book is draft** → not found for everyone else.
-3. **Purchase exists** for this user and book → full access, reason `purchased`, even if the book is archived.
-4. **Book is archived** → not found for everyone else.
-5. **Active subscription** (period end later than now, cancelled or not) → full access, reason `subscription`.
-6. **Otherwise** → preview access, reason `locked`: metadata plus the first `preview_page_count` pages.
+1. **Creator of the book** → full access, reason `owner`.
+2. **Purchase exists** for this user and book → full access, reason `purchased`, even if the book is archived.
+3. **Book is archived** → not found for everyone else.
+4. **Active subscription** (period end later than now, cancelled or not) → full access, reason `subscription`.
+5. **Otherwise** → preview access, reason `locked`: metadata plus the first `preview_page_count` pages.
 
 Every book in a list or detail response carries `access: { level: 'full' | 'preview', reason }`, so the UI picks badges and buttons from the same rule the server enforces. Expiry is computed from `current_period_end` at request time, so no background job is needed.
 
@@ -115,10 +114,9 @@ Parent mode itself is the purchase gate, so checkout needs no extra adult check.
 | Creator deletes a book with no orders | Hard delete with its pages | Book service |
 | Creator edits another creator's book | 404, so other creators' IDs are not confirmed | Book service ownership check |
 | Parent calls a creator endpoint | 403 `FORBIDDEN_ROLE` | Role middleware |
-| Draft book requested by a parent | 404 | Access service |
 | Creator buys their own book | 409 `ALREADY_OWNED` (owner access) | Checkout service |
 | Locked page fetched directly by URL | 403 `ENTITLEMENT_REQUIRED` | Content endpoint |
-| Purchase of a draft or archived book | 409 `BOOK_NOT_PURCHASABLE` | Checkout service |
+| Purchase of an archived book | 409 `BOOK_NOT_PURCHASABLE` | Checkout service |
 | Kid token calls checkout, account or creator endpoints | 403 `KID_MODE_FORBIDDEN` | Scope middleware |
 | Kid mode catalog | Only full-access books, no prices in the payload | Book service, by token scope |
 | Enter Kid mode with no PIN set | 409 `PIN_NOT_SET`; the UI asks the parent to set one | Auth service |
@@ -145,7 +143,7 @@ Eight SQLite tables; the key split is **orders** (payment attempts, many, can fa
 | Table | Purpose | Key constraints | Edge cases it covers |
 | --- | --- | --- | --- |
 | users | Parents and creators | `email` unique; `role` in (parent, creator); `pin_hash` nullable | Role checks, Kid mode exit, PIN lockout |
-| books | Catalog items | `creator_id` → users; `status` in (draft, published, archived); `price_idr` > 0; `preview_page_count` ≥ 0 | Drafts hidden, archive instead of delete |
+| books | Catalog items | `creator_id` → users; `status` in (published, archived); `price_idr` > 0; `preview_page_count` ≥ 0 | Archive instead of delete when there are buyers |
 | book\_pages | Book content | unique (`book_id`, `page_number`); cascade delete with book | Preview cut-off, locked pages by URL |
 | plans | Subscription offers | `price_idr` > 0; `period_days` > 0 | Price snapshot on orders |
 | subscriptions | Subscription entitlement | `user_id` → users; partial unique index on `user_id` where `status = 'active'` | One active subscription, expiry by date, cancel at period end |
@@ -182,7 +180,7 @@ Eight SQLite tables; the key split is **orders** (payment attempts, many, can fa
 - Parent A with no subscription and 1 purchased book.
 - Parent B with an active subscription.
 - Parent C whose subscription has expired, plus 1 purchased book (shows the fallback).
-- Two creators, about 8 books between them: 6 published, 1 draft, 1 archived with a buyer.
+- Two creators, about 8 books between them: 6 published, 1 archived with a buyer.
 
 ## API design
 
@@ -201,8 +199,8 @@ REST under `/api/v1`, JSON in and out, a Bearer JWT on everything except login a
 | GET | /books/:id/pages | Any, incl. kid | Allowed pages; preview users get the first N plus `lockedFrom` and `totalPages` | 404 |
 | GET | /books/:id/pages/:n | Any, incl. kid | One page; past the preview without access → 403 | 403 `ENTITLEMENT_REQUIRED`, 404 |
 | GET | /creator/books | Creator | Own books in every status | 403 `FORBIDDEN_ROLE` |
-| POST | /books | Creator | Create a book with its pages; starts as draft | 400, 403 |
-| PATCH | /books/:id | Creator, owner | Edit fields, replace pages, publish or unpublish | 400, 403, 404 |
+| POST | /books | Creator | Create a book with its pages; published immediately | 400, 403 |
+| PATCH | /books/:id | Creator, owner | Edit fields and replace pages | 400, 403, 404 |
 | DELETE | /books/:id | Creator, owner | Hard delete if no orders, otherwise archive; returns `{ result: 'deleted' \| 'archived' }` | 403, 404 |
 | GET | /plans | Parent | Active subscription plans | — |
 | POST | /orders | Parent | `{ type: 'book', bookId, acknowledgeSubscriptionOverlap? }` or `{ type: 'subscription', planId }` + `Idempotency-Key` header → pending order | 400, 409 `ALREADY_OWNED` / `ALREADY_SUBSCRIBED` / `SUBSCRIPTION_OVERLAP_ACK_REQUIRED` / `BOOK_NOT_PURCHASABLE` |

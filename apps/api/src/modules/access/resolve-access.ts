@@ -25,10 +25,9 @@ export function isSubscriptionActive(subscription: SubscriptionInfo | null, now:
 }
 
 // The only place access is decided. First match wins; null means "not found for
-// this user", so a draft or a retired book never confirms it exists.
+// this user", so a retired book never confirms it exists.
 export function resolveAccess(subject: AccessSubject, book: AccessBook, now: number): Access | null {
   if (book.creatorId === subject.userId) return { level: 'full', reason: 'owner' };
-  if (book.status === 'draft') return null;
   if (subject.purchasedBookIds.has(book.id)) return { level: 'full', reason: 'purchased' };
   if (book.status === 'archived') return null;
   if (isSubscriptionActive(subject.subscription, now)) {

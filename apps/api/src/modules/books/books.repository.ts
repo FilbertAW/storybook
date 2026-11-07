@@ -41,7 +41,7 @@ export class BooksRepository {
     return row;
   }
 
-  // Published books, plus archived ones the reader bought. Drafts never appear.
+  // Published books, plus archived ones the reader bought. Nothing else appears.
   // Whether each book is readable in full is decided afterwards by resolveAccess.
   listCatalog(filter: { purchasedBookIds: string[]; q?: string; age?: number }) {
     const retired =

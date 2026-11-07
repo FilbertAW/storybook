@@ -48,12 +48,11 @@ packages/shared zod schemas, DTO types, error codes (imported by api and web)
 `resolveAccess(user, book, now)` in AccessService is the only place access is decided.
 List, detail and pages endpoints all use it. First match wins:
 
-1. Creator of the book → full, reason `owner` (drafts included)
-2. Book is draft → not found for everyone else
-3. Purchase exists → full, reason `purchased` (even if archived)
-4. Book is archived → not found for everyone else
-5. Subscription with `current_period_end` > now → full, reason `subscription`
-6. Otherwise → preview (first `preview_page_count` pages), reason `locked`
+1. Creator of the book → full, reason `owner`
+2. Purchase exists → full, reason `purchased` (even if archived)
+3. Book is archived → not found for everyone else
+4. Subscription with `current_period_end` > now → full, reason `subscription`
+5. Otherwise → preview (first `preview_page_count` pages), reason `locked`
 
 - The server never sends a page the user cannot read. Hiding it in the UI is not enough.
 - Subscription expiry is computed from dates at request time. No cron jobs.

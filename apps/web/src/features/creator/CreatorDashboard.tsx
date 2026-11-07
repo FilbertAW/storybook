@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CreatorBookDto } from '@storylib/shared'
-import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { creatorApi } from '@/api/endpoints'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { formatIdr } from '@/lib/format'
 
-const STATUS_VARIANT = { published: 'default', draft: 'secondary', archived: 'outline' } as const
+const STATUS_VARIANT = { published: 'default', archived: 'outline' } as const
 
 export function CreatorDashboard() {
   const queryClient = useQueryClient()
@@ -26,11 +26,6 @@ export function CreatorDashboard() {
       queryClient.invalidateQueries({ queryKey: keys.books }),
     ])
   }
-
-  const setStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'draft' | 'published' }) => creatorApi.update(id, { status }),
-    onSuccess: refresh,
-  })
 
   const remove = useMutation({
     mutationFn: (id: string) => creatorApi.remove(id),
@@ -59,7 +54,6 @@ export function CreatorDashboard() {
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
-      {setStatus.isError && <ErrorNotice error={setStatus.error} title="Could not change the status" />}
 
       {books.isPending && <Loading />}
       {books.isError && <ErrorNotice error={books.error} />}
@@ -84,16 +78,6 @@ export function CreatorDashboard() {
                     <Button variant="outline" size="sm" render={<Link to={`/creator/${b.id}/edit`} />} nativeButton={false}>
                       <Pencil /> Edit
                     </Button>
-                    {b.status === 'draft' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={setStatus.isPending}
-                        onClick={() => setStatus.mutate({ id: b.id, status: 'published' })}
-                      >
-                        <Eye /> Publish
-                      </Button>
-                    )}
                   </>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setDeleting(b)}>
