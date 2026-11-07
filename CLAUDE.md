@@ -68,7 +68,7 @@ List, detail and pages endpoints all use it. First match wins:
 - A kid token may only: list and read full-access books (no prices in responses) and post events.
   Everything else returns 403 `KID_MODE_FORBIDDEN`.
 - Leaving Kid mode: PIN + kid token → fresh parent token. No re-login.
-- PIN: 4–6 digits, hashed with scrypt from `node:crypto`. 5 wrong attempts → locked 5 minutes
+- PIN: 4 digits, hashed with scrypt from `node:crypto`. 5 wrong attempts → locked 5 minutes
   (429 `PIN_LOCKED`). The attempt counter lives in the database, not in memory.
 
 ## Frontend state

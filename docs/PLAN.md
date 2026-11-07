@@ -88,7 +88,7 @@ Every book in a list or detail response carries `access: { level: 'full' | 'prev
 
 ### Kid mode
 
-1. The parent sets a 4–6 digit PIN once. It is stored as a scrypt hash from `node:crypto`, so no new dependency.
+1. The parent sets a 4 digit PIN once. It is stored as a scrypt hash from `node:crypto`, so no new dependency.
 2. Entering Kid mode swaps the parent token for a **kid token** (scope `kid`, 7-day expiry). The client deletes the parent token, so a reload or reopen stays in Kid mode.
 3. A kid token can only list and read books with full access, and log events. The server strips prices from those responses. Every other endpoint answers 403 `KID_MODE_FORBIDDEN`.
 4. Leaving Kid mode sends the PIN and gets a parent token back. After 5 wrong attempts the PIN locks for 5 minutes; the counter lives in the database so it holds on serverless hosts.

@@ -155,9 +155,10 @@ describe('leaving Kid mode', () => {
     expect(second.body.error.details.attemptsRemaining).toBe(MAX_PIN_ATTEMPTS - 2);
   });
 
-  it('400s a PIN that is not 4 to 6 digits, without counting an attempt', async () => {
+  it('400s a PIN that is not exactly 4 digits, without counting an attempt', async () => {
     const kid = await t.kidToken(PARENT_A);
     expect((await unlock(kid, '12')).status).toBe(400);
+    expect((await unlock(kid, '12345')).status).toBe(400);
     expect((await unlock(kid, 'abcd')).status).toBe(400);
     const next = await unlock(kid, WRONG_PIN);
     expect(next.body.error.details.attemptsRemaining).toBe(MAX_PIN_ATTEMPTS - 1);
@@ -256,9 +257,9 @@ describe('setting a PIN', () => {
     expect(res.status).toBe(429);
   });
 
-  it('400s a PIN that is not 4 to 6 digits', async () => {
+  it('400s a PIN that is not exactly 4 digits', async () => {
     const token = await t.login(PARENT_C);
-    for (const pin of ['123', '1234567', 'abcd', 1234]) {
+    for (const pin of ['123', '12345', '123456', 'abcd', 1234]) {
       expect((await setPin(token, { pin })).status, String(pin)).toBe(400);
     }
   });

@@ -18,7 +18,8 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export const authResponseSchema = z.object({ token: z.string(), user: userSchema });
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 
-export const pinSchema = z.string().regex(/^\d{4,6}$/, 'PIN must be 4 to 6 digits.');
+export const PIN_LENGTH = 4;
+export const pinSchema = z.string().regex(/^\d{4}$/, 'PIN must be 4 digits.');
 
 export const setPinRequestSchema = z.object({
   pin: pinSchema,

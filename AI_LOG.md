@@ -135,3 +135,9 @@ The AI-usage slide is written from this file.
 **Produced:** The login page is a plain email sign-in. The checkout payment step is a single Pay button; the failure button is a commented block with the one-line `pay.mutate('fail')` call, the API's `simulate: 'fail'` is untouched, and the `failed` phase still handles the result. README has an "Account credentials" table and a "Simulating a failed payment" section (uncomment the button, or call the API).
 
 **Kept:** the email-only mock login (no password field, so the UI does not pretend to check one).
+
+## Follow-up: 4-digit PIN
+
+**Prompt:** Limit the PIN to 4 numbers and do not show 6 slots.
+
+**Produced:** `pinSchema` is exactly 4 digits (shared `PIN_LENGTH = 4`, used by the keypad and the account form). The keypad shows 4 dots and enables OK at 4. The account form accepts at most 4 digits. API tests now also reject 5- and 6-digit PINs. `CLAUDE.md` and `docs/PLAN.md` say "4 digits". The demo PIN `1234` and the stored hashes are unchanged.

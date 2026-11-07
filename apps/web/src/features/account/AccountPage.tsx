@@ -1,3 +1,4 @@
+import { PIN_LENGTH } from '@storylib/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { LogOut, Smile } from 'lucide-react'
 import { useState } from 'react'
@@ -143,7 +144,7 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
     },
   })
 
-  const validNew = /^\d{4,6}$/.test(pin) && pin === confirm
+  const validNew = /^\d{4}$/.test(pin) && pin === confirm
   const canSave = validNew && (!pinSet || currentPin.length > 0)
 
   return (
@@ -178,20 +179,20 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
           {pinSet && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="current-pin">Current PIN</Label>
-              <Input id="current-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={currentPin} onChange={(e) => setCurrentPin(e.target.value)} />
+              <Input id="current-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={currentPin} onChange={(e) => setCurrentPin(e.target.value)} />
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="new-pin">New PIN</Label>
-              <Input id="new-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} />
+              <Input id="new-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={pin} onChange={(e) => setPin(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="confirm-pin">Repeat new PIN</Label>
-              <Input id="confirm-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <Input id="confirm-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </div>
           </div>
-          {pin && !/^\d{4,6}$/.test(pin) && <p className="text-xs text-destructive">Use 4 to 6 digits.</p>}
+          {pin && !/^\d{4}$/.test(pin) && <p className="text-xs text-destructive">Use exactly 4 digits.</p>}
           {confirm && pin !== confirm && <p className="text-xs text-destructive">The two PINs do not match.</p>}
           {save.isError && (
             <Alert variant="destructive">
