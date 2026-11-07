@@ -1,7 +1,9 @@
 import type { Db } from './client';
 import { hashPin } from '../shared/pin';
 import {
+  bookPageTranslations,
   bookPages,
+  bookTranslations,
   books,
   events,
   orders,
@@ -10,7 +12,7 @@ import {
   subscriptions,
   users,
 } from './schema';
-import { DEMO_PIN, SEED_BOOKS, SEED_PLAN, SEED_USERS, pageImage } from './seed-data';
+import { DEMO_PIN, SEED_BOOKS, SEED_PLAN, SEED_TRANSLATIONS_ID, SEED_USERS, pageImage } from './seed-data';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -22,6 +24,8 @@ export async function seedDatabase(db: Db, now: number) {
     await tx.delete(purchases);
     await tx.delete(subscriptions);
     await tx.delete(orders);
+    await tx.delete(bookPageTranslations);
+    await tx.delete(bookTranslations);
     await tx.delete(bookPages);
     await tx.delete(books);
     await tx.delete(plans);
@@ -63,14 +67,25 @@ export async function seedDatabase(db: Db, now: number) {
         .returning({ id: books.id });
       bookIds[b.slug] = row!.id;
       bookPrices[b.slug] = b.priceIdr;
-      await tx.insert(bookPages).values(
-        b.pages.map((text, n) => ({
-          bookId: row!.id,
-          pageNumber: n + 1,
-          text,
-          imageUrl: pageImage(b.slug, n + 1),
-        })),
-      );
+      const pageRows = await tx
+        .insert(bookPages)
+        .values(
+          b.pages.map((text, n) => ({
+            bookId: row!.id,
+            pageNumber: n + 1,
+            text,
+            imageUrl: pageImage(b.slug, n + 1),
+          })),
+        )
+        .returning({ id: bookPages.id, pageNumber: bookPages.pageNumber });
+
+      const id = SEED_TRANSLATIONS_ID[b.slug];
+      if (id) {
+        await tx.insert(bookTranslations).values({ bookId: row!.id, locale: 'id', title: id.title, description: id.description });
+        await tx.insert(bookPageTranslations).values(
+          pageRows.map((p) => ({ pageId: p.id, locale: 'id' as const, text: id.pages[p.pageNumber - 1]! })),
+        );
+      }
     }
 
     // Parent A: no subscription, owns one published book.

@@ -10,13 +10,15 @@ import type {
   CreatorBookWithPagesDto,
   CreatorBooksResponse,
   DeleteBookResponse,
+  Locale,
   UpdateBookRequest,
 } from '@storylib/shared';
+import { BASE_LOCALE } from '@storylib/shared';
 import type { Scope, UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
 import type { AccessService } from '../access/access.service';
-import type { BookRow, BooksRepository } from './books.repository';
+import type { BookRow, BooksRepository, BookTranslation } from './books.repository';
 
 const DEFAULT_PREVIEW_PAGES = 2;
 
@@ -43,12 +45,12 @@ function toDto(row: BookRow): CreatorBookDto {
 }
 
 // A kid sees only books the family can read in full, and never a price.
-function toSummary(row: BookRow, access: Access, scope: Scope): BookSummaryDto {
+function toSummary(row: BookRow, access: Access, scope: Scope, tr?: BookTranslation): BookSummaryDto {
   return {
     id: row.id,
-    title: row.title,
+    title: tr?.title ?? row.title,
     authorName: row.authorName,
-    description: row.description,
+    description: tr?.description ?? row.description,
     coverUrl: row.coverUrl,
     ageMin: row.ageMin,
     ageMax: row.ageMax,
@@ -67,13 +69,15 @@ export class BookService {
     private readonly clock: Clock,
   ) {}
 
-  async list(user: UserRow, scope: Scope, query: BooksQuery): Promise<BooksResponse> {
+  async list(user: UserRow, scope: Scope, query: BooksQuery, locale: Locale = BASE_LOCALE): Promise<BooksResponse> {
     const subject = await this.access.subjectFor(user);
     const rows = await this.books.listCatalog({
       purchasedBookIds: [...subject.purchasedBookIds],
       q: query.q,
       age: query.age,
+      locale,
     });
+    const translations = await this.books.translations(rows.map((r) => r.id), locale);
     const items: BookSummaryDto[] = [];
     for (const row of rows) {
       const access = this.access.resolve(subject, row);
@@ -81,20 +85,21 @@ export class BookService {
       if (scope === 'kid' && access.level !== 'full') continue;
       if (query.access === 'full' && access.level !== 'full') continue;
       if (query.access === 'locked' && access.level !== 'preview') continue;
-      items.push(toSummary(row, access, scope));
+      items.push(toSummary(row, access, scope, translations.get(row.id)));
     }
     return { books: items };
   }
 
-  async detail(user: UserRow, scope: Scope, id: string): Promise<BookSummaryDto> {
+  async detail(user: UserRow, scope: Scope, id: string, locale: Locale = BASE_LOCALE): Promise<BookSummaryDto> {
     const { book, access } = await this.visible(user, scope, id);
-    return toSummary(book, access, scope);
+    const translations = await this.books.translations([id], locale);
+    return toSummary(book, access, scope, translations.get(id));
   }
 
-  async pages(user: UserRow, scope: Scope, id: string): Promise<BookPagesResponse> {
+  async pages(user: UserRow, scope: Scope, id: string, locale: Locale = BASE_LOCALE): Promise<BookPagesResponse> {
     const { book, access } = await this.visible(user, scope, id);
     const shown = this.shownPages(book, access);
-    const pages = await this.books.getPages(id, access.level === 'full' ? undefined : shown);
+    const pages = await this.books.getPages(id, access.level === 'full' ? undefined : shown, locale);
     return {
       pages,
       totalPages: book.pageCount,
@@ -103,7 +108,13 @@ export class BookService {
     };
   }
 
-  async page(user: UserRow, scope: Scope, id: string, pageNumber: number): Promise<BookPageResponse> {
+  async page(
+    user: UserRow,
+    scope: Scope,
+    id: string,
+    pageNumber: number,
+    locale: Locale = BASE_LOCALE,
+  ): Promise<BookPageResponse> {
     const { book, access } = await this.visible(user, scope, id);
     if (pageNumber < 1 || pageNumber > book.pageCount) {
       throw new AppError('NOT_FOUND', 'Page not found.');
@@ -113,7 +124,7 @@ export class BookService {
         bookId: id,
       });
     }
-    const page = await this.books.getPage(id, pageNumber);
+    const page = await this.books.getPage(id, pageNumber, locale);
     if (!page) throw new AppError('NOT_FOUND', 'Page not found.');
     return { page, totalPages: book.pageCount, access };
   }

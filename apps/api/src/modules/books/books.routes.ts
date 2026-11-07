@@ -15,18 +15,18 @@ export function booksRoutes(service: BookService) {
   return new Hono<AppEnv>()
     // Reading: open to every signed-in mode, including a kid token.
     .get('/', zValidator('query', booksQuerySchema, validationHook), async (c) =>
-      c.json(await service.list(c.get('user'), c.get('scope'), c.req.valid('query'))),
+      c.json(await service.list(c.get('user'), c.get('scope'), c.req.valid('query'), c.get('locale'))),
     )
     .get('/:id', async (c) =>
-      c.json(await service.detail(c.get('user'), c.get('scope'), c.req.param('id'))),
+      c.json(await service.detail(c.get('user'), c.get('scope'), c.req.param('id'), c.get('locale'))),
     )
     .get('/:id/pages', async (c) =>
-      c.json(await service.pages(c.get('user'), c.get('scope'), c.req.param('id'))),
+      c.json(await service.pages(c.get('user'), c.get('scope'), c.req.param('id'), c.get('locale'))),
     )
     .get('/:id/pages/:n', async (c) => {
       const n = c.req.param('n');
       if (!/^\d+$/.test(n)) throw new AppError('NOT_FOUND', 'Page not found.');
-      return c.json(await service.page(c.get('user'), c.get('scope'), c.req.param('id'), Number(n)));
+      return c.json(await service.page(c.get('user'), c.get('scope'), c.req.param('id'), Number(n), c.get('locale')));
     })
     // Creator-only writes.
     .post(

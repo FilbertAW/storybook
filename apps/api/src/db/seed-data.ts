@@ -174,3 +174,118 @@ export const SEED_BOOKS: SeedBook[] = [
     ],
   }),
 ];
+
+// Indonesian versions of the seed books, keyed by slug. The books above stay in their
+// original language (English); anything missing here falls back to it.
+export interface SeedTranslation {
+  title: string;
+  description: string;
+  pages: string[];
+}
+
+export const SEED_TRANSLATIONS_ID: Record<string, SeedTranslation> = {
+  'kiko-firefly': {
+    title: 'Kiko si Kunang-kunang Kecil',
+    description:
+      'Kiko adalah kunang-kunang terkecil di padang rumput, dan cahayanya paling redup. Bisakah cahaya kecil tetap menolong?',
+    pages: [
+      'Kiko adalah kunang-kunang terkecil di seluruh padang rumput.',
+      'Cahayanya begitu redup sampai kunang-kunang lain tertawa cekikikan.',
+      '"Hampir tidak kelihatan!" kata mereka, lalu melesat pergi.',
+      'Suatu malam, kabut tebal menyelimuti padang rumput.',
+      'Cahaya besar yang terang hanya memantul dan membuat semuanya serba putih.',
+      'Seekor anak kelinci tersesat, dan ia ketakutan.',
+      'Kiko bersinar lembut, dan si kelinci melihat cahayanya yang hangat.',
+      'Selangkah demi selangkah, Kiko mengantarnya pulang. Cahaya kecil tetaplah cahaya.',
+    ],
+  },
+  'rainy-day-parade': {
+    title: 'Parade Hari Hujan',
+    description:
+      'Hujan turun, dan para hewan bosan. Lalu seseorang menemukan genangan yang pas sekali untuk diinjak-injak.',
+    pages: [
+      'Tik, tik, tik, tes, tes. Hujan tak mau berhenti.',
+      'Bebek Kecil menatap keluar jendela dan menghela napas.',
+      '"Tidak ada yang bisa dilakukan," kata Bebek Kecil.',
+      'Lalu ia melihat genangan besar dan bulat di dekat pagar.',
+      'Cebur! Satu kaki masuk. Cebur! Kaki yang lain menyusul.',
+      'Anak Babi datang membawa payung merah yang cerah.',
+      'Kodok melompat datang dan menabuh daun seperti gendang.',
+      'Tak lama kemudian ada parade, dan tak seorang pun peduli pada hujan.',
+    ],
+  },
+  'mimi-moon-cake': {
+    title: 'Mimi dan Kue Bulan',
+    description:
+      'Mimi memanggang kue bulan untuk bulan purnama. Tetapi bulan tampak kesepian, jadi ia menyiapkan kejutan.',
+    pages: [
+      'Pada malam bulan purnama, Mimi memanggang kue bundar berwarna keemasan.',
+      'Baunya seperti gula, mentega, dan sedikit sihir.',
+      'Ia menengadah dan melihat bulan, besar, bulat, dan sendirian.',
+      '"Tidak ada yang merayakan bersamamu," kata Mimi pelan.',
+      'Maka ia membawa kuenya dan mendaki bukit tertinggi.',
+      'Di puncak, ia memotong kue itu menjadi banyak bagian.',
+      'Ia membaginya dengan burung hantu, jangkrik, dan seekor kucing yang mengantuk.',
+      'Bulan bersinar lebih terang dari sebelumnya, dan Mimi tersenyum sepanjang jalan pulang.',
+    ],
+  },
+  'sleepy-banyan': {
+    title: 'Pohon Beringin yang Mengantuk',
+    description:
+      'Pohon beringin tua itu lelah dan ingin tidur, tetapi para penghuni hutan terus meminta tolong kepadanya.',
+    pages: [
+      'Pohon beringin tua itu menguap lebar sekali.',
+      '"Aku ingin tidur," bisiknya pada angin.',
+      'Tetapi seekor burung bertanya, "Bolehkah aku membuat sarang di dahanmu?"',
+      'Lalu seekor tupai bertanya, "Bolehkah aku menyimpan kacangku di batangmu?"',
+      'Seorang gadis kecil bertanya, "Bolehkah aku berayun di akar panjangmu?"',
+      'Setiap kali, beringin menjawab ya, dan hatinya terasa hangat.',
+      'Ketika bulan terbit, semua meringkuk tenang di bawah daunnya.',
+      'Pohon tua itu tersenyum dan akhirnya tertidur, tidak pernah sendirian.',
+    ],
+  },
+  'dino-school': {
+    title: 'Hari Pertama Dino di Sekolah',
+    description:
+      'Dino gugup pergi ke sekolah. Ekornya terlalu panjang dan kakinya terlalu menghentak. Adakah tempat untuknya?',
+    pages: [
+      'Dino bangun dengan perut berdebar-debar. Hari ini hari sekolah.',
+      'Ia mengemas tasnya, dan ekornya menyenggol lampu hingga jatuh.',
+      '"Aduh," kata Dino. "Aku terlalu besar untuk sekolah."',
+      'Di pintu, guru tersenyum. "Kami sudah menyiapkan tempat duduk untukmu."',
+      'Kursinya besar dan kuat, dibuat khusus untuk Dino.',
+      'Di pelajaran seni, ekornya yang panjang pas sekali untuk melukis garis-garis.',
+      'Saat bermain, kakinya yang menghentak membuat jejak raksasa yang paling keren.',
+      'Ketika ibu datang menjemput, Dino bertanya, "Boleh aku kembali besok?"',
+    ],
+  },
+  'boat-bintang': {
+    title: 'Perahu Bernama Bintang',
+    description:
+      'Sebuah perahu kayu kecil bermimpi berlayar melewati pelabuhan dan menemukan bahwa bintang-bintang menunjukkan jalan pulang.',
+    pages: [
+      'Bintang adalah perahu kayu kecil yang tinggal di dekat pelabuhan.',
+      'Setiap malam ia memandangi bintang-bintang berkedip di atas air.',
+      '"Andai aku bisa berlayar ke sana," katanya.',
+      'Pada suatu sore yang tenang, seorang nelayan melepaskan talinya.',
+      'Bintang hanyut melewati mercusuar dan ikan-ikan yang mengantuk.',
+      'Laut makin luas, dan ia mulai merasa sangat kecil.',
+      'Lalu ia menengadah. Bintang-bintang membentuk jalan dari cahaya perak.',
+      'Bintang mengikuti cahaya itu dan menemukan jalan pulang, penuh cerita.',
+    ],
+  },
+  'lost-kite': {
+    title: 'Layang-layang yang Hilang',
+    description: 'Sebuah layang-layang terlepas dari talinya dan berpetualang melintasi atap-atap desa.',
+    pages: [
+      'Rani memegang tali layang-layang merahnya erat-erat.',
+      'Angin kencang datang, dan wuss, talinya terlepas.',
+      'Layang-layang itu terbang melewati atap rumah dan pasar.',
+      'Ia melambai pada tukang roti, kucing, dan anjing yang mengantuk.',
+      'Ia menari di antara awan, makin lama makin tinggi.',
+      'Akhirnya angin mereda dan layang-layang melayang turun.',
+      'Ia mendarat dengan lembut di kebun Rani sendiri.',
+      'Rani memeluk layang-layangnya. "Selamat datang kembali," bisiknya.',
+    ],
+  },
+};

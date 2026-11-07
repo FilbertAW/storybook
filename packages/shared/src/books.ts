@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// Books are stored in their original language (English in the seed); other languages
+// are translations that fall back to the original when one is missing.
+export const localeSchema = z.enum(['id', 'en']);
+export type Locale = z.infer<typeof localeSchema>;
+export const BASE_LOCALE: Locale = 'en';
+
 export const bookStatusSchema = z.enum(['published', 'archived']);
 export type BookStatus = z.infer<typeof bookStatusSchema>;
 
