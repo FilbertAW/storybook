@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/cli.ts migrate",
     "db:seed": "tsx --env-file-if-exists=.env src/db/cli.ts seed",
-    "db:setup": "tsx --env-file-if-exists=.env src/db/cli.ts setup"
+    "db:setup": "tsx --env-file-if-exists=.env src/db/cli.ts setup",
+    "build": "node scripts/build-vercel.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",
@@ -25,7 +26,11 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "drizzle-kit": "^0.31.11",
+    "esbuild": "^0.28.2",
     "tsx": "^4.0.0",
     "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
