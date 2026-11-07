@@ -138,7 +138,7 @@ Parent mode itself is the purchase gate, so checkout needs no extra adult check.
 
 ## Data model
 
-Eight SQLite tables; the key split is **orders** (payment attempts, many, can fail) versus **purchases** and **subscriptions** (entitlements, what access reads). IDs are UUID text; timestamps are UTC epoch milliseconds; money is integer IDR.
+Ten SQLite tables (eight core, plus two for translations); the key split is **orders** (payment attempts, many, can fail) versus **purchases** and **subscriptions** (entitlements, what access reads). IDs are UUID text; timestamps are UTC epoch milliseconds; money is integer IDR.
 
 | Table | Purpose | Key constraints | Edge cases it covers |
 | --- | --- | --- | --- |
@@ -149,6 +149,7 @@ Eight SQLite tables; the key split is **orders** (payment attempts, many, can fa
 | subscriptions | Subscription entitlement | `user_id` → users; partial unique index on `user_id` where `status = 'active'` | One active subscription, expiry by date, cancel at period end |
 | orders | Every payment attempt | unique (`user_id`, `idempotency_key`); `type` = book needs `book_id`, `type` = subscription needs `plan_id`; `status` in (pending, paid, failed) | Double-click, failed and pending payments, price changes, buying while subscribed |
 | purchases | Book entitlement | unique (`user_id`, `book_id`); `order_id` → orders | Already owned, access survives archive and subscription end |
+| book\_translations, book\_page\_translations | A book's title, description and page text in Indonesian | Primary key (book, locale) and (page, locale); cascade with the book | Books readable in the parent's language; a missing translation falls back to the original |
 | events | Product analytics | indexed on (`name`, `created_at`) | Success metrics |
 
 ### Columns

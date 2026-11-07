@@ -165,3 +165,15 @@ The AI-usage slide is written from this file.
 **Left in English on purpose:** book titles, descriptions and the plan name (seed content), the server's own error messages (fallback only for a code without a translation).
 
 **Not verified:** the rendered screens and wording quality in the browser. A throwaway script confirmed the default, interpolation, plurals and persistence.
+
+## Follow-up: translated books
+
+**Prompt:** Also translate the books themselves.
+
+**Decision (data model change, approved by the request):** books stay in their original language (English in the seed) in the existing columns; Indonesian lives in two new tables, `book_translations` (title, description) and `book_page_translations` (page text), keyed by (book, locale) and (page, locale) with cascade. A missing translation falls back to the original, per field and per page. Added as migration `0001` so Turso was migrated, not rebuilt.
+
+**Produced:** `Accept-Language` middleware (first supported language, default English); list, detail, pages, page and order history return the translated text; search also matches the Indonesian title; the preview limit and 403 for locked pages are unchanged. Seed has Indonesian text for all 7 books (titles, descriptions, 56 pages). Editing a book keeps its translations if the words are unchanged and drops them if the title, description or a page's text changes, so a stale translation is never shown. The web client sends the language on every request and puts it in the query keys, so switching refetches. 19 new tests (199 total); breaking the lookup turns 6 of them red.
+
+**Left out:** creators cannot enter Indonesian text yet; their dashboard shows the original. Author names and the plan name are not translated. Reseeded Turso (demo data only).
+
+**Not verified:** how the translated text reads on screen; the Indonesian is my own translation.
