@@ -27,19 +27,40 @@ const bookFields = {
   pages: z.array(bookPageInputSchema).min(1).max(40),
 };
 
+// The Indonesian version of a book. The title and description come as a pair; an empty
+// string means "not translated" and the reader sees the original. `pages` is empty or has
+// one entry per page (an empty entry leaves that page untranslated).
+export const bookTranslationInputSchema = z
+  .object({
+    title: z.string().trim().max(120),
+    description: z.string().trim().max(1000),
+    pages: z.array(z.string().trim().max(500)).max(40),
+  })
+  .refine((t) => (t.title === '') === (t.description === ''), {
+    message: 'Give both the translated title and description, or neither.',
+    path: ['title'],
+  });
+export type BookTranslationInput = z.infer<typeof bookTranslationInputSchema>;
+const translationsField = z.object({ id: bookTranslationInputSchema }).optional();
+
 const ageRangeIsValid = (b: { ageMin?: number; ageMax?: number }) =>
   b.ageMin === undefined || b.ageMax === undefined || b.ageMin <= b.ageMax;
 const ageRangeIssue = { message: 'ageMin must not be greater than ageMax.', path: ['ageMax'] };
 
 // authorName defaults to the creator's name and previewPageCount to 2.
 export const createBookRequestSchema = z
-  .object({ ...bookFields, authorName: bookFields.authorName.optional(), previewPageCount: bookFields.previewPageCount.optional() })
+  .object({
+    ...bookFields,
+    authorName: bookFields.authorName.optional(),
+    previewPageCount: bookFields.previewPageCount.optional(),
+    translations: translationsField,
+  })
   .refine(ageRangeIsValid, ageRangeIssue);
 export type CreateBookRequest = z.infer<typeof createBookRequestSchema>;
 
 // A book is published when created; DELETE archives it when it has orders.
 export const updateBookRequestSchema = z
-  .object(bookFields)
+  .object({ ...bookFields, translations: translationsField })
   .partial()
   .refine(ageRangeIsValid, ageRangeIssue);
 export type UpdateBookRequest = z.infer<typeof updateBookRequestSchema>;
@@ -63,8 +84,13 @@ export const creatorBookSchema = z.object({
 });
 export type CreatorBookDto = z.infer<typeof creatorBookSchema>;
 
+// Always the original text, whatever language the request asks for, with the Indonesian
+// version beside it so the edit form can show both.
 export const creatorBookWithPagesSchema = creatorBookSchema.extend({
   pages: z.array(z.object({ pageNumber: z.number(), text: z.string(), imageUrl: z.string() })),
+  translations: z.object({
+    id: z.object({ title: z.string(), description: z.string(), pages: z.array(z.string()) }).nullable(),
+  }),
 });
 export type CreatorBookWithPagesDto = z.infer<typeof creatorBookWithPagesSchema>;
 

@@ -27,7 +27,7 @@ Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test` (API tests, in-memory SQLite)
 
 ## Languages
 
-The app is in Indonesian by default and can be switched to English with the **ID | EN** toggle (top right, on the sign-in page and in Kid mode too). The choice is remembered in the browser. Texts live in `apps/web/src/i18n` (`en.ts` defines the keys, `id.ts` must translate every one). API error codes are translated in the client, so error messages follow the chosen language. The seeded books are translated too: the API returns a book's title, description and page text in the language of the `Accept-Language` header (`id` or `en`, which the web app sends), and falls back to the book's original text when a translation is missing. A creator's own dashboard shows the original text; adding Indonesian text in the creator form is not built yet.
+The app is in Indonesian by default and can be switched to English with the **ID | EN** toggle (top right, on the sign-in page and in Kid mode too). The choice is remembered in the browser. Texts live in `apps/web/src/i18n` (`en.ts` defines the keys, `id.ts` must translate every one). API error codes are translated in the client, so error messages follow the chosen language. The seeded books are translated too: the API returns a book's title, description and page text in the language of the `Accept-Language` header (`id` or `en`, which the web app sends), and falls back to the book's original text when a translation is missing. Creators can add the Indonesian version of a book (title, description and page text, all optional) in the book form; their dashboard and edit form always show the original text.
 
 ## Account credentials
 

@@ -3,8 +3,9 @@ import { createBookRequestSchema } from '@storylib/shared'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { ApiError } from '@/api/errors'
 import { creatorApi } from '@/api/endpoints'
-import { keys, useBookPages, useCreatorBooks } from '@/api/queries'
+import { keys, useCreatorBook } from '@/api/queries'
 import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -18,6 +19,7 @@ import { type TranslationKey, useT } from '@/i18n'
 interface PageDraft {
   text: string
   imageUrl: string
+  idText: string // the page in Indonesian, '' for none
 }
 
 interface FormValues {
@@ -29,13 +31,15 @@ interface FormValues {
   ageMax: string
   priceIdr: string
   previewPageCount: string
+  idTitle: string
+  idDescription: string
   pages: PageDraft[]
 }
 
 // Placeholder pictures so a new book can be filled in quickly; the creator can paste real URLs.
 const sample = (seed: string, size: string) => `https://picsum.photos/seed/${seed}/${size}`
 const randomSeed = () => Math.random().toString(36).slice(2, 8)
-const newPage = (): PageDraft => ({ text: '', imageUrl: sample(randomSeed(), '800/600') })
+const newPage = (): PageDraft => ({ text: '', imageUrl: sample(randomSeed(), '800/600'), idText: '' })
 
 const blank = (): FormValues => ({
   title: '',
@@ -46,6 +50,8 @@ const blank = (): FormValues => ({
   ageMax: '6',
   priceIdr: '15000',
   previewPageCount: '2',
+  idTitle: '',
+  idDescription: '',
   pages: [newPage(), newPage()],
 })
 
@@ -64,16 +70,21 @@ export function BookFormPage() {
   const { t } = useT()
   const { id } = useParams()
   const editing = !!id
-  const books = useCreatorBooks()
-  const pages = useBookPages(id)
+  // The creator's own copy: the original text, whatever language the app is shown in.
+  const loaded = useCreatorBook(id)
 
   if (!editing) return <BookForm initial={blank()} />
-  if (books.isPending || pages.isPending) return <Loading />
-  if (books.isError) return <ErrorNotice error={books.error} />
-  if (pages.isError) return <ErrorNotice error={pages.error} />
+  if (loaded.isPending) return <Loading />
+  if (loaded.isError) {
+    return loaded.error instanceof ApiError && loaded.error.code === 'NOT_FOUND' ? (
+      <ErrorNotice message={t('form.bookNotFound')} title={t('common.notFound')} />
+    ) : (
+      <ErrorNotice error={loaded.error} />
+    )
+  }
 
-  const book = books.data.books.find((b) => b.id === id)
-  if (!book) return <ErrorNotice message={t('form.bookNotFound')} title={t('common.notFound')} />
+  const book = loaded.data
+  const idVersion = book.translations.id
 
   return (
     <BookForm
@@ -87,7 +98,9 @@ export function BookFormPage() {
         ageMax: String(book.ageMax),
         priceIdr: String(book.priceIdr),
         previewPageCount: String(book.previewPageCount),
-        pages: pages.data.pages.map((p) => ({ text: p.text, imageUrl: p.imageUrl })),
+        idTitle: idVersion?.title ?? '',
+        idDescription: idVersion?.description ?? '',
+        pages: book.pages.map((p, i) => ({ text: p.text, imageUrl: p.imageUrl, idText: idVersion?.pages[i] ?? '' })),
       }}
     />
   )
@@ -129,13 +142,18 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
       ageMax: Number(values.ageMax),
       priceIdr: Number(values.priceIdr),
       previewPageCount: Number(values.previewPageCount),
-      pages: values.pages,
+      pages: values.pages.map((p) => ({ text: p.text, imageUrl: p.imageUrl })),
+      // Always sent, so emptying the fields removes an existing translation.
+      translations: {
+        id: { title: values.idTitle, description: values.idDescription, pages: values.pages.map((p) => p.idText) },
+      },
     })
     if (!result.success) {
       setProblems(
         result.error.issues.map((issue) => {
           const [head, index, sub] = issue.path
           if (head === 'ageMax' && issue.code === 'custom') return t('form.ageRange')
+          if (head === 'translations') return t('form.translationPair')
           const field =
             head === 'pages' && typeof index === 'number'
               ? t(sub === 'imageUrl' ? 'form.pageImage' : 'form.pageText', { n: index + 1 })
@@ -192,6 +210,21 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
 
         <Card>
           <CardHeader>
+            <CardTitle>{t('form.idSection')}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t('form.idHint')}</p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Field label={t('form.idTitle')} id="id-title">
+              <Input id="id-title" value={values.idTitle} onChange={(e) => set('idTitle', e.target.value)} />
+            </Field>
+            <Field label={t('form.idDescription')} id="id-description">
+              <Textarea id="id-description" rows={3} value={values.idDescription} onChange={(e) => set('idDescription', e.target.value)} />
+            </Field>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>{t('form.pages', { count: values.pages.length })}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -211,6 +244,7 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
                   </Button>
                 </div>
                 <Textarea aria-label={t('form.pageText', { n: i + 1 })} rows={2} placeholder={t('form.storyPlaceholder')} value={page.text} onChange={(e) => setPage(i, { text: e.target.value })} />
+                <Textarea aria-label={t('form.idPageText', { n: i + 1 })} rows={2} placeholder={t('form.idPagePlaceholder')} value={page.idText} onChange={(e) => setPage(i, { idText: e.target.value })} />
                 <Input aria-label={t('form.pageImage', { n: i + 1 })} placeholder={t('form.imagePlaceholder')} value={page.imageUrl} onChange={(e) => setPage(i, { imageUrl: e.target.value })} />
               </div>
             ))}

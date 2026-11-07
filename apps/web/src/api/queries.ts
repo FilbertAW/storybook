@@ -14,6 +14,7 @@ export const keys = {
   orders: ['orders'] as const,
   plans: ['plans'] as const,
   creatorBooks: ['creator-books'] as const,
+  creatorBook: (id: string) => ['creator-books', 'detail', id] as const,
 }
 
 // A kid token is refused by /me, so it is only fetched in parent mode.
@@ -52,3 +53,6 @@ export const usePlans = (enabled = true) =>
 
 export const useCreatorBooks = () =>
   useQuery({ queryKey: keys.creatorBooks, queryFn: creatorApi.list })
+
+export const useCreatorBook = (id: string | undefined) =>
+  useQuery({ queryKey: keys.creatorBook(id ?? ''), queryFn: () => creatorApi.get(id!), enabled: !!id })

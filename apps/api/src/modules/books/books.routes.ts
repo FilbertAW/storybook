@@ -47,7 +47,10 @@ export function booksRoutes(service: BookService) {
 }
 
 export function creatorRoutes(service: BookService) {
-  return new Hono<AppEnv>().get('/books', requireRole('creator'), async (c) =>
-    c.json(await service.listOwn(c.get('user'))),
-  );
+  return new Hono<AppEnv>()
+    .get('/books', requireRole('creator'), async (c) => c.json(await service.listOwn(c.get('user'))))
+    // The edit form's source: always the original text, never a translated view.
+    .get('/books/:id', requireRole('creator'), async (c) =>
+      c.json(await service.getOwn(c.get('user'), c.req.param('id'))),
+    );
 }

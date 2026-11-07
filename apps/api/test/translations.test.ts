@@ -200,3 +200,109 @@ describe('order history', () => {
     expect(idr.body.orders.map((o: { bookTitle: string }) => o.bookTitle)).toEqual([KIKO_ID]);
   });
 });
+
+describe('creators entering the Indonesian version', () => {
+  let sari: string;
+  const GECKO_ID = {
+    title: 'Cicak Kecil yang Berani',
+    description: 'Seekor cicak menemukan keberanian pada malam yang berbadai.',
+    pages: ['Cicak tinggal di balik jam dapur.', 'Suatu malam, guntur datang.'],
+  };
+
+  beforeEach(async () => {
+    sari = await t.login(SARI);
+  });
+
+  const create = (translations?: unknown, extra: Record<string, unknown> = {}) =>
+    t.request('/books', { method: 'POST', token: sari, json: newBook({ ...(translations ? { translations } : {}), ...extra }) });
+
+  it('saves a translation with a new book and shows it to Indonesian readers', async () => {
+    const created = await create({ id: GECKO_ID });
+    expect(created.status).toBe(201);
+    expect(created.body.translations.id).toEqual(GECKO_ID);
+
+    const detail = await t.request(`/books/${created.body.id}`, { token: parent, headers: ID });
+    expect(detail.body.title).toBe(GECKO_ID.title);
+    expect(detail.body.description).toBe(GECKO_ID.description);
+    const pages = await t.request(`/books/${created.body.id}/pages`, { token: parent, headers: ID });
+    expect(pages.body.pages.map((p: { text: string }) => p.text)).toEqual(GECKO_ID.pages);
+  });
+
+  it('has no translation block content for a book created without one', async () => {
+    const created = await create();
+    expect(created.body.translations).toEqual({ id: null });
+  });
+
+  it('gives the creator the original text from their own endpoint, in any language', async () => {
+    const created = await create({ id: GECKO_ID });
+    const res = await t.request(`/creator/books/${created.body.id}`, { token: sari, headers: ID });
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe('The Brave Little Gecko');
+    expect(res.body.pages[0].text).toBe('Gecko lived behind the kitchen clock.');
+    expect(res.body.translations.id).toEqual(GECKO_ID);
+  });
+
+  it('keeps that endpoint to the book’s own creator', async () => {
+    const id = await t.bookId(KIKO);
+    expect((await t.request(`/creator/books/${id}`, { token: await t.login('budi@example.com') })).status).toBe(404);
+    expect((await t.request(`/creator/books/${id}`, { token: parent })).status).toBe(403);
+  });
+
+  it('lets a translation cover only some pages; the rest fall back', async () => {
+    const created = await create({ id: { ...GECKO_ID, pages: ['Cicak tinggal di balik jam dapur.', ''] } });
+    const pages = await t.request(`/books/${created.body.id}/pages`, { token: parent, headers: ID });
+    expect(pages.body.pages.map((p: { text: string }) => p.text)).toEqual([
+      'Cicak tinggal di balik jam dapur.',
+      'One night the thunder came.',
+    ]);
+  });
+
+  it('accepts a title and description translation without any page text', async () => {
+    const created = await create({ id: { ...GECKO_ID, pages: [] } });
+    expect(created.status).toBe(201);
+    const detail = await t.request(`/books/${created.body.id}`, { token: parent, headers: ID });
+    expect(detail.body.title).toBe(GECKO_ID.title);
+  });
+
+  it('rejects a title without a description (and the reverse), and a wrong number of page texts', async () => {
+    expect((await create({ id: { ...GECKO_ID, description: '' } })).status).toBe(400);
+    expect((await create({ id: { ...GECKO_ID, title: '' } })).status).toBe(400);
+    const wrong = await create({ id: { ...GECKO_ID, pages: ['only one'] } });
+    expect(wrong.status).toBe(400);
+    expect(wrong.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('replaces a translation on update, and clears it when the fields are empty', async () => {
+    const created = await create({ id: GECKO_ID });
+    const id = created.body.id as string;
+    const changed = { ...GECKO_ID, title: 'Cicak Pemberani' };
+    const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { translations: { id: changed } } });
+    expect(res.body.translations.id.title).toBe('Cicak Pemberani');
+
+    const cleared = await t.request(`/books/${id}`, {
+      method: 'PATCH',
+      token: sari,
+      json: { translations: { id: { title: '', description: '', pages: ['', ''] } } },
+    });
+    expect(cleared.body.translations.id).toBeNull();
+    const detail = await t.request(`/books/${id}`, { token: parent, headers: ID });
+    expect(detail.body.title).toBe('The Brave Little Gecko');
+  });
+
+  it('leaves the translation alone when an update does not mention it', async () => {
+    const created = await create({ id: GECKO_ID });
+    await t.request(`/books/${created.body.id}`, { method: 'PATCH', token: sari, json: { priceIdr: 21_000 } });
+    const detail = await t.request(`/creator/books/${created.body.id}`, { token: sari });
+    expect(detail.body.translations.id).toEqual(GECKO_ID);
+  });
+
+  it('checks the page count against the book when an update sends only translations', async () => {
+    const created = await create({ id: GECKO_ID });
+    const res = await t.request(`/books/${created.body.id}`, {
+      method: 'PATCH',
+      token: sari,
+      json: { translations: { id: { ...GECKO_ID, pages: ['a', 'b', 'c'] } } },
+    });
+    expect(res.status).toBe(400);
+  });
+});

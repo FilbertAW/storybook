@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, getTableColumns, inArray, lte, or, sql } from 'drizzle-orm';
-import { BASE_LOCALE, type BookPageInput, type Locale } from '@storylib/shared';
+import { BASE_LOCALE, type BookPageInput, type BookTranslationInput, type Locale } from '@storylib/shared';
 import type { Db } from '../../db/client';
 import { bookPageTranslations, bookPages, bookTranslations, books, events, orders } from '../../db/schema';
 
@@ -14,6 +14,8 @@ export type BookRow = Awaited<ReturnType<BooksRepository['findOwned']>> & {};
 export type BookTranslation = { title: string; description: string };
 export type NewBook = Omit<typeof books.$inferInsert, 'id'>;
 export type BookChanges = Partial<Omit<typeof books.$inferInsert, 'id' | 'creatorId' | 'createdAt'>>;
+
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const toPageRows = (bookId: string, pages: BookPageInput[]) =>
   pages.map((p, i) => ({ bookId, pageNumber: i + 1, text: p.text, imageUrl: p.imageUrl }));
@@ -114,10 +116,28 @@ export class BooksRepository {
     return row;
   }
 
-  insertWithPages(book: NewBook, pages: BookPageInput[]): Promise<string> {
+  // The Indonesian version of one book, shaped for the edit form: one text per page ('' if none).
+  async translationOf(bookId: string): Promise<{ title: string; description: string; pages: string[] } | null> {
+    const [book] = await this.db.select().from(bookTranslations).where(eq(bookTranslations.bookId, bookId));
+    const pages = await this.db
+      .select({ text: bookPageTranslations.text })
+      .from(bookPages)
+      .leftJoin(
+        bookPageTranslations,
+        and(eq(bookPageTranslations.pageId, bookPages.id), eq(bookPageTranslations.locale, 'id')),
+      )
+      .where(eq(bookPages.bookId, bookId))
+      .orderBy(asc(bookPages.pageNumber));
+    const texts = pages.map((p) => p.text ?? '');
+    if (!book && texts.every((t) => t === '')) return null;
+    return { title: book?.title ?? '', description: book?.description ?? '', pages: texts };
+  }
+
+  insertWithPages(book: NewBook, pages: BookPageInput[], translation?: BookTranslationInput): Promise<string> {
     return this.db.transaction(async (tx) => {
       const [row] = await tx.insert(books).values(book).returning({ id: books.id });
       await tx.insert(bookPages).values(toPageRows(row!.id, pages));
+      if (translation) await writeTranslation(tx, row!.id, translation);
       return row!.id;
     });
   }
@@ -125,7 +145,7 @@ export class BooksRepository {
   // Fields and pages change together or not at all. A translation describes the text it was
   // written from, so it is dropped only when that original text really changes: saving a
   // book with the same words (a new price, say) keeps its translations.
-  update(id: string, changes: BookChanges, pages?: BookPageInput[]) {
+  update(id: string, changes: BookChanges, pages?: BookPageInput[], translation?: BookTranslationInput) {
     return this.db.transaction(async (tx) => {
       const [current] = await tx
         .select({ title: books.title, description: books.description })
@@ -159,6 +179,9 @@ export class BooksRepository {
           await tx.insert(bookPages).values(toPageRows(id, pages));
         }
       }
+
+      // Sent translations replace what was there, so clearing the fields removes them.
+      if (translation) await writeTranslation(tx, id, translation);
     });
   }
 
@@ -185,4 +208,27 @@ export class BooksRepository {
       await tx.delete(books).where(eq(books.id, id));
     });
   }
+}
+
+// Replaces the Indonesian version of a book with the one sent. Empty strings are skipped,
+// so a title-less translation or an untranslated page simply falls back to the original.
+async function writeTranslation(tx: Tx, bookId: string, translation: BookTranslationInput) {
+  await tx.delete(bookTranslations).where(eq(bookTranslations.bookId, bookId));
+  if (translation.title !== '') {
+    await tx
+      .insert(bookTranslations)
+      .values({ bookId, locale: 'id', title: translation.title, description: translation.description });
+  }
+  const pages = await tx
+    .select({ id: bookPages.id })
+    .from(bookPages)
+    .where(eq(bookPages.bookId, bookId))
+    .orderBy(asc(bookPages.pageNumber));
+  if (pages.length > 0) {
+    await tx.delete(bookPageTranslations).where(inArray(bookPageTranslations.pageId, pages.map((p) => p.id)));
+  }
+  const rows = translation.pages.flatMap((text, i) =>
+    text !== '' && pages[i] ? [{ pageId: pages[i]!.id, locale: 'id' as const, text }] : [],
+  );
+  if (rows.length > 0) await tx.insert(bookPageTranslations).values(rows);
 }

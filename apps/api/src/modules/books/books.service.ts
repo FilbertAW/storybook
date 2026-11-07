@@ -13,7 +13,7 @@ import type {
   Locale,
   UpdateBookRequest,
 } from '@storylib/shared';
-import { BASE_LOCALE } from '@storylib/shared';
+import { BASE_LOCALE, type BookTranslationInput } from '@storylib/shared';
 import type { Scope, UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
@@ -136,7 +136,8 @@ export class BookService {
 
   async create(creator: UserRow, input: CreateBookRequest): Promise<CreatorBookWithPagesDto> {
     const now = this.clock.now();
-    const { pages, authorName, previewPageCount, ...fields } = input;
+    const { pages, authorName, previewPageCount, translations, ...fields } = input;
+    this.checkTranslation(translations?.id, pages.length);
     const id = await this.books.insertWithPages(
       {
         ...fields,
@@ -148,7 +149,12 @@ export class BookService {
         updatedAt: now,
       },
       pages,
+      translations?.id,
     );
+    return this.withPages(await this.owned(creator, id));
+  }
+
+  async getOwn(creator: UserRow, id: string): Promise<CreatorBookWithPagesDto> {
     return this.withPages(await this.owned(creator, id));
   }
 
@@ -157,13 +163,14 @@ export class BookService {
     if (book.status === 'archived') {
       throw new AppError('VALIDATION_ERROR', 'Archived books can no longer be edited.');
     }
-    const { pages, ...changes } = input;
+    const { pages, translations, ...changes } = input;
+    this.checkTranslation(translations?.id, pages?.length ?? book.pageCount);
     const ageMin = changes.ageMin ?? book.ageMin;
     const ageMax = changes.ageMax ?? book.ageMax;
     if (ageMin > ageMax) {
       throw new AppError('VALIDATION_ERROR', 'ageMin must not be greater than ageMax.');
     }
-    await this.books.update(id, { ...changes, updatedAt: this.clock.now() }, pages);
+    await this.books.update(id, { ...changes, updatedAt: this.clock.now() }, pages, translations?.id);
     return this.withPages(await this.owned(creator, id));
   }
 
@@ -199,7 +206,18 @@ export class BookService {
     return book;
   }
 
+  // Translated pages are one per page, or none at all.
+  private checkTranslation(translation: BookTranslationInput | undefined, pageCount: number) {
+    if (translation && translation.pages.length !== 0 && translation.pages.length !== pageCount) {
+      throw new AppError('VALIDATION_ERROR', 'Give one translated text for every page, or none.');
+    }
+  }
+
   private async withPages(book: BookRow): Promise<CreatorBookWithPagesDto> {
-    return { ...toDto(book), pages: await this.books.getPages(book.id) };
+    return {
+      ...toDto(book),
+      pages: await this.books.getPages(book.id),
+      translations: { id: await this.books.translationOf(book.id) },
+    };
   }
 }

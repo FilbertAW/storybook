@@ -200,8 +200,9 @@ REST under `/api/v1`, JSON in and out, a Bearer JWT on everything except login a
 | GET | /books/:id/pages | Any, incl. kid | Allowed pages; preview users get the first N plus `lockedFrom` and `totalPages` | 404 |
 | GET | /books/:id/pages/:n | Any, incl. kid | One page; past the preview without access → 403 | 403 `ENTITLEMENT_REQUIRED`, 404 |
 | GET | /creator/books | Creator | Own books in every status | 403 `FORBIDDEN_ROLE` |
-| POST | /books | Creator | Create a book with its pages; published immediately | 400, 403 |
-| PATCH | /books/:id | Creator, owner | Edit fields and replace pages | 400, 403, 404 |
+| GET | /creator/books/:id | Creator, owner | One own book with its pages in the original language plus the Indonesian version, for the edit form | 403, 404 |
+| POST | /books | Creator | Create a book with its pages and an optional Indonesian version; published immediately | 400, 403 |
+| PATCH | /books/:id | Creator, owner | Edit fields, replace pages, replace or clear the Indonesian version | 400, 403, 404 |
 | DELETE | /books/:id | Creator, owner | Hard delete if no orders, otherwise archive; returns `{ result: 'deleted' \| 'archived' }` | 403, 404 |
 | GET | /plans | Parent | Active subscription plans | — |
 | POST | /orders | Parent | `{ type: 'book', bookId, acknowledgeSubscriptionOverlap? }` or `{ type: 'subscription', planId }` + `Idempotency-Key` header → pending order | 400, 409 `ALREADY_OWNED` / `ALREADY_SUBSCRIBED` / `SUBSCRIPTION_OVERLAP_ACK_REQUIRED` / `BOOK_NOT_PURCHASABLE` |

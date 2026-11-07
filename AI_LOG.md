@@ -177,3 +177,13 @@ The AI-usage slide is written from this file.
 **Left out:** creators cannot enter Indonesian text yet; their dashboard shows the original. Author names and the plan name are not translated. Reseeded Turso (demo data only).
 
 **Not verified:** how the translated text reads on screen; the Indonesian is my own translation.
+
+## Follow-up: creators enter the Indonesian version
+
+**Prompt:** Yes: add Indonesian fields to the creator form.
+
+**Produced:** `POST /books` and `PATCH /books/:id` accept an optional `translations.id` (title and description as a pair, plus one text per page; an empty string means "not translated"). A sent translation replaces the stored one, so emptying the fields removes it; leaving `translations` out of an update keeps it. New `GET /creator/books/:id` returns the original pages and the Indonesian version for the edit form. The form has an "Indonesian version" card and an Indonesian text box under each page.
+
+**Bug caught on the way:** the edit form loaded pages through the reader endpoint, which since the previous change returns the reader's language. In Indonesian it would have loaded Indonesian text and saved it over the original. The form now uses the creator endpoint, which ignores the language header (tested).
+
+**Verified:** 209 API tests (10 new), typecheck, lint, build. **Not verified:** the form in a browser.
