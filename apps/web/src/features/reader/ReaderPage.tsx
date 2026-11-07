@@ -5,12 +5,14 @@ import { logEvent } from '@/api/endpoints'
 import { useBook, useBookPages, useMe, usePlans } from '@/api/queries'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Button } from '@/components/ui/button'
+import { plural, useT } from '@/i18n'
 import { formatIdr } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 // One reader for both modes. In Kid mode the server only ever returns books the
 // family can read in full, so there is never a paywall, a price or a buy button.
 export function ReaderPage({ kid = false }: { kid?: boolean }) {
+  const { t } = useT()
   const { id } = useParams()
   const pages = useBookPages(id)
   const book = useBook(id)
@@ -54,8 +56,8 @@ export function ReaderPage({ kid = false }: { kid?: boolean }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [go])
 
-  if (pages.isPending) return <Loading label="Opening the book…" />
-  if (pages.isError) return <ErrorNotice error={pages.error} title="This book is not available" />
+  if (pages.isPending) return <Loading label={t('reader.opening')} />
+  if (pages.isError) return <ErrorNotice error={pages.error} title={t('book.unavailable')} />
 
   const loaded = pages.data
   const backTo = kid ? '/kid' : `/books/${id}`
@@ -68,7 +70,7 @@ export function ReaderPage({ kid = false }: { kid?: boolean }) {
     <div className={cn('mx-auto flex w-full max-w-2xl flex-col gap-4', kid && 'max-w-3xl')}>
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size={kid ? 'lg' : 'sm'} render={<Link to={backTo} />} nativeButton={false}>
-          <ArrowLeft /> {kid ? 'Back' : 'Book'}
+          <ArrowLeft /> {kid ? t('common.back') : t('reader.book')}
         </Button>
         <p className="truncate text-sm text-muted-foreground">{book.data?.title}</p>
       </div>
@@ -76,23 +78,22 @@ export function ReaderPage({ kid = false }: { kid?: boolean }) {
       {atPaywall ? (
         <section className="flex flex-col items-center gap-4 rounded-2xl border bg-muted/40 px-6 py-12 text-center">
           <Lock className="size-8 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">That was the preview</h2>
+          <h2 className="text-lg font-semibold">{t('reader.previewTitle')}</h2>
           <p className="max-w-sm text-sm text-muted-foreground">
-            {loaded.totalPages - shown} more {loaded.totalPages - shown === 1 ? 'page is' : 'pages are'} waiting. Unlock the
-            whole story to keep reading.
+            {t(plural('reader.locked', loaded.totalPages - shown), { count: loaded.totalPages - shown })}
           </p>
           {isCreator ? (
-            <p className="text-sm text-muted-foreground">Creators read other books as previews.</p>
+            <p className="text-sm text-muted-foreground">{t('reader.creatorNote')}</p>
           ) : (
             <div className="flex flex-wrap justify-center gap-2">
               {price !== undefined && (
                 <Button size="lg" render={<Link to={`/checkout/book/${id}`} />} nativeButton={false}>
-                  Buy for {formatIdr(price)}
+                  {t('book.buy', { price: formatIdr(price) })}
                 </Button>
               )}
               {plan && (
                 <Button size="lg" variant="outline" render={<Link to="/checkout/subscription" />} nativeButton={false}>
-                  Subscribe {formatIdr(plan.priceIdr)}/month
+                  {t('book.subscribe', { price: formatIdr(plan.priceIdr) })}
                 </Button>
               )}
             </div>
@@ -109,13 +110,13 @@ export function ReaderPage({ kid = false }: { kid?: boolean }) {
 
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" size={kid ? 'lg' : 'default'} onClick={() => go(-1)} disabled={index === 0}>
-          <ChevronLeft /> Back
+          <ChevronLeft /> {t('common.back')}
         </Button>
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {atPaywall ? 'Preview ended' : `Page ${index + 1} of ${loaded.totalPages}`}
+          {atPaywall ? t('reader.previewEnded') : t('reader.page', { n: index + 1, total: loaded.totalPages })}
         </p>
         <Button size={kid ? 'lg' : 'default'} onClick={() => go(1)} disabled={index >= lastIndex}>
-          Next <ChevronRight />
+          {t('common.next')} <ChevronRight />
         </Button>
       </div>
     </div>

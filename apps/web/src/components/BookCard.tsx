@@ -1,12 +1,14 @@
 import type { BookSummaryDto } from '@storylib/shared'
 import { Link } from 'react-router'
 import { AccessBadge } from '@/components/AccessBadge'
+import { useT } from '@/i18n'
 import { formatIdr } from '@/lib/format'
 
 const CARD_CLASS = 'group flex flex-col gap-2 rounded-xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
 
 // A locked book calls onPreview (a modal) when given one; everything else opens its page.
 export function BookCard({ book, onPreview }: { book: BookSummaryDto; onPreview?: (book: BookSummaryDto) => void }) {
+  const { t } = useT()
   const locked = book.access.reason === 'locked'
   const showPrice = locked && book.priceIdr !== undefined
   const content = (
@@ -25,7 +27,7 @@ export function BookCard({ book, onPreview }: { book: BookSummaryDto; onPreview?
       <div className="flex flex-col gap-0.5 px-0.5">
         <h3 className="line-clamp-2 text-sm leading-snug font-medium">{book.title}</h3>
         <p className="text-xs text-muted-foreground">
-          Ages {book.ageMin}–{book.ageMax}
+          {t('book.ages', { min: book.ageMin, max: book.ageMax })}
           {showPrice ? ` · ${formatIdr(book.priceIdr!)}` : ''}
         </p>
       </div>

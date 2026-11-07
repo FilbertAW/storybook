@@ -1,8 +1,10 @@
 import { BookOpen, LogOut, PenLine, User } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { useMe } from '@/api/queries'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { Button } from '@/components/ui/button'
 import { endSession } from '@/features/session/actions'
+import { useT } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -12,6 +14,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 export function ParentShell() {
+  const { t } = useT()
   const me = useMe()
   const isCreator = me.data?.user.role === 'creator'
 
@@ -20,21 +23,22 @@ export function ParentShell() {
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-2.5">
           <NavLink to="/" className="flex items-center gap-2 font-semibold">
-            <BookOpen className="size-5" /> Storybook Library
+            <BookOpen className="size-5" /> {t('app.name')}
           </NavLink>
           <nav className="flex items-center gap-1">
             <NavLink to="/" end className={navClass}>
-              Library
+              {t('nav.library')}
             </NavLink>
             {isCreator && (
               <NavLink to="/creator" className={navClass}>
-                <PenLine className="size-4" /> Creator
+                <PenLine className="size-4" /> {t('nav.creator')}
               </NavLink>
             )}
             <NavLink to="/account" className={navClass}>
-              <User className="size-4" /> Account
+              <User className="size-4" /> {t('nav.account')}
             </NavLink>
-            <Button variant="ghost" size="icon" aria-label="Log out" onClick={endSession}>
+            <LanguageSwitch />
+            <Button variant="ghost" size="icon" aria-label={t('nav.logout')} onClick={endSession}>
               <LogOut />
             </Button>
           </nav>

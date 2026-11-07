@@ -11,11 +11,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useT } from '@/i18n'
 import { formatIdr } from '@/lib/format'
 
 const STATUS_VARIANT = { published: 'default', archived: 'outline' } as const
 
 export function CreatorDashboard() {
+  const { t } = useT()
   const queryClient = useQueryClient()
   const books = useCreatorBooks()
   const [deleting, setDeleting] = useState<CreatorBookDto | null>(null)
@@ -33,8 +35,8 @@ export function CreatorDashboard() {
     onSuccess: async ({ result }) => {
       setNotice(
         result === 'deleted'
-          ? `"${deleting?.title}" was deleted.`
-          : `"${deleting?.title}" has buyers, so it was retired instead. They can still read it.`,
+          ? t('creator.deleted', { title: deleting?.title ?? '' })
+          : t('creator.retired', { title: deleting?.title ?? '' }),
       )
       setDeleting(null)
       await refresh()
@@ -44,9 +46,9 @@ export function CreatorDashboard() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Your books</h1>
+        <h1 className="text-xl font-semibold">{t('creator.title')}</h1>
         <Button render={<Link to="/creator/new" />} nativeButton={false}>
-          <Plus /> New book
+          <Plus /> {t('creator.new')}
         </Button>
       </div>
 
@@ -58,7 +60,7 @@ export function CreatorDashboard() {
 
       {books.isPending && <Loading />}
       {books.isError && <ErrorNotice error={books.error} />}
-      {books.data && books.data.books.length === 0 && <Empty>You have no books yet. Create your first one.</Empty>}
+      {books.data && books.data.books.length === 0 && <Empty>{t('creator.empty')}</Empty>}
       {books.data && books.data.books.length > 0 && (
         <ul className="flex flex-col divide-y rounded-xl border">
           {books.data.books.map((b) => (
@@ -67,22 +69,22 @@ export function CreatorDashboard() {
               <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
                 <span className="truncate font-medium">{b.title}</span>
                 <span className="text-xs text-muted-foreground">
-                  {b.pageCount} pages · {formatIdr(b.priceIdr)} · Ages {b.ageMin}–{b.ageMax}
+                  {t('creator.row', { pages: b.pageCount, price: formatIdr(b.priceIdr), min: b.ageMin, max: b.ageMax })}
                 </span>
                 <Badge variant={STATUS_VARIANT[b.status]} className="w-fit">
-                  {b.status}
+                  {t(b.status === 'published' ? 'creator.status.published' : 'creator.status.archived')}
                 </Badge>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {b.status !== 'archived' && (
                   <>
                     <Button variant="outline" size="sm" render={<Link to={`/creator/${b.id}/edit`} />} nativeButton={false}>
-                      <Pencil /> Edit
+                      <Pencil /> {t('creator.edit')}
                     </Button>
                   </>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setDeleting(b)}>
-                  <Trash2 /> {b.status === 'archived' ? 'Remove' : 'Delete'}
+                  <Trash2 /> {b.status === 'archived' ? t('creator.remove') : t('creator.delete')}
                 </Button>
               </div>
             </li>
@@ -93,19 +95,18 @@ export function CreatorDashboard() {
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete "{deleting?.title}"?</DialogTitle>
+            <DialogTitle>{t('creator.dialogTitle', { title: deleting?.title ?? '' })}</DialogTitle>
             <DialogDescription>
-              If nobody has ordered it, it is deleted for good. If it has buyers, it is retired instead: hidden from the
-              catalog, but still readable by everyone who bought it.
+              {t('creator.dialogBody')}
             </DialogDescription>
           </DialogHeader>
           {remove.isError && <ErrorNotice error={remove.error} />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Keep it
+              {t('creator.keep')}
             </Button>
             <LoadingButton variant="destructive" pending={remove.isPending} onClick={() => deleting && remove.mutate(deleting.id)}>
-              Delete
+              {t('creator.delete')}
             </LoadingButton>
           </DialogFooter>
         </DialogContent>

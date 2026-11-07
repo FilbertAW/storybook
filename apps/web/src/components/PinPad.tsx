@@ -2,6 +2,7 @@ import { Delete, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { PIN_LENGTH } from '@storylib/shared'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/i18n'
 
 
 interface PinPadProps {
@@ -12,7 +13,8 @@ interface PinPadProps {
 
 // A 4 digit entry pad. The parent types the PIN, never the child, so it is
 // a plain keypad rather than a keyboard.
-export function PinPad({ onSubmit, busy = false, submitLabel = 'Unlock' }: PinPadProps) {
+export function PinPad({ onSubmit, busy = false, submitLabel }: PinPadProps) {
+  const { t } = useT()
   const [pin, setPin] = useState('')
 
   const press = (digit: string) => setPin((p) => (p.length < PIN_LENGTH ? p + digit : p))
@@ -25,7 +27,7 @@ export function PinPad({ onSubmit, busy = false, submitLabel = 'Unlock' }: PinPa
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="flex h-6 items-center gap-2" aria-label={`${pin.length} digits entered`} role="img">
+      <div className="flex h-6 items-center gap-2" aria-label={t('pinpad.entered', { count: pin.length })} role="img">
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
           <span
             key={i}
@@ -39,13 +41,13 @@ export function PinPad({ onSubmit, busy = false, submitLabel = 'Unlock' }: PinPa
             {d}
           </Button>
         ))}
-        <Button variant="ghost" className="size-14" aria-label="Delete" onClick={() => setPin((p) => p.slice(0, -1))} disabled={busy || !pin}>
+        <Button variant="ghost" className="size-14" aria-label={t('pinpad.delete')} onClick={() => setPin((p) => p.slice(0, -1))} disabled={busy || !pin}>
           <Delete />
         </Button>
         <Button variant="outline" className="size-14 text-lg" onClick={() => press('0')} disabled={busy}>
           0
         </Button>
-        <Button className="size-14" onClick={submit} disabled={busy || pin.length < PIN_LENGTH} aria-label={submitLabel} aria-busy={busy}>
+        <Button className="size-14" onClick={submit} disabled={busy || pin.length < PIN_LENGTH} aria-label={submitLabel ?? t('pinpad.unlock')} aria-busy={busy}>
           {busy ? <Loader2 className="animate-spin" /> : 'OK'}
         </Button>
       </div>

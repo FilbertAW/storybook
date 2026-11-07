@@ -155,3 +155,13 @@ The AI-usage slide is written from this file.
 **Prompt:** The age filter isn't needed.
 
 **Produced:** Removed the age dropdown and its state from the library page; search and the All / My books / Locked tabs stay. The API's `age` query parameter is untouched (still tested), so a filter can come back without a backend change.
+
+## Follow-up: Indonesian and English
+
+**Prompt:** Add locales, Indonesian and English, default Indonesian.
+
+**Produced:** A small typed i18n in `apps/web/src/i18n` with no new dependency (asked-first rule): `en.ts` defines the keys, `id.ts` is typed `Record<TranslationKey, string>` so a missing translation fails the typecheck, `useT()` re-renders on a switch, and the choice is a persisted Zustand store (default `id`). An ID | EN toggle sits in the parent header, Kid mode header and sign-in page, and `<html lang>` follows it. Every screen is translated. API errors are translated by their stable code (`error.<CODE>`), with PIN attempts and lockout time worded in the client; dates follow the language. Plural keys end in `.one` and `.other`. Also fixed stale copy that still said "4 to 6 digit PIN".
+
+**Left in English on purpose:** book titles, descriptions and the plan name (seed content), the server's own error messages (fallback only for a code without a translation).
+
+**Not verified:** the rendered screens and wording quality in the browser. A throwaway script confirmed the default, interpolation, plurals and persistence.

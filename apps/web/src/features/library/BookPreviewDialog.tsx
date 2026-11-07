@@ -7,11 +7,13 @@ import { useBookPages, useMe, usePlans } from '@/api/queries'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { plural, useT } from '@/i18n'
 import { formatIdr } from '@/lib/format'
 
 // A locked book opens here instead of a new page: the price and the ways to unlock sit
 // above the preview, so a parent can read a few pages and decide without leaving the library.
 export function BookPreviewDialog({ book, onClose }: { book: BookSummaryDto; onClose: () => void }) {
+  const { t } = useT()
   const pages = useBookPages(book.id)
   const me = useMe()
   const plans = usePlans()
@@ -42,7 +44,7 @@ export function BookPreviewDialog({ book, onClose }: { book: BookSummaryDto; onC
         <DialogHeader className="pr-8">
           <DialogTitle className="text-lg leading-snug">{book.title}</DialogTitle>
           <DialogDescription>
-            {book.authorName} · Ages {book.ageMin}–{book.ageMax}
+            {book.authorName} · {t('book.ages', { min: book.ageMin, max: book.ageMax })}
           </DialogDescription>
         </DialogHeader>
 
@@ -50,37 +52,36 @@ export function BookPreviewDialog({ book, onClose }: { book: BookSummaryDto; onC
           <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3">
             <p className="mr-auto text-lg font-semibold">{formatIdr(book.priceIdr)}</p>
             <Button render={<Link to={`/checkout/book/${book.id}`} />} nativeButton={false}>
-              Buy this book
+              {t('preview.buy')}
             </Button>
             {plan && (
               <Button variant="outline" render={<Link to="/checkout/subscription" />} nativeButton={false}>
-                Subscribe {formatIdr(plan.priceIdr)}/month
+                {t('book.subscribe', { price: formatIdr(plan.priceIdr) })}
               </Button>
             )}
           </div>
         )}
 
-        {pages.isPending && <Loading label="Opening the preview…" />}
-        {pages.isError && <ErrorNotice error={pages.error} title="Could not load the preview" />}
+        {pages.isPending && <Loading label={t('preview.opening')} />}
+        {pages.isError && <ErrorNotice error={pages.error} title={t('preview.loadError')} />}
         {loaded && page && (
           <div className="flex flex-col gap-3">
             <img src={page.imageUrl} alt="" className="aspect-[4/3] w-full rounded-xl bg-muted object-cover" />
             <p className="text-center leading-relaxed text-balance">{page.text}</p>
             <div className="flex items-center justify-between gap-2">
               <Button variant="outline" size="sm" onClick={() => setIndex((i) => i - 1)} disabled={index === 0}>
-                <ChevronLeft /> Back
+                <ChevronLeft /> {t('common.back')}
               </Button>
               <p className="text-xs text-muted-foreground" aria-live="polite">
-                Preview page {index + 1} of {shown} · the full book has {loaded.totalPages}
+                {t('preview.page', { n: index + 1, shown, total: loaded.totalPages })}
               </p>
               <Button size="sm" onClick={() => setIndex((i) => i + 1)} disabled={atEnd}>
-                Next <ChevronRight />
+                {t('common.next')} <ChevronRight />
               </Button>
             </div>
             {atEnd && loaded.totalPages > shown && (
               <p className="text-center text-sm text-muted-foreground">
-                That was the preview. {loaded.totalPages - shown} more {loaded.totalPages - shown === 1 ? 'page is' : 'pages are'}{' '}
-                waiting once you unlock the book.
+                {t(plural('preview.end', loaded.totalPages - shown), { count: loaded.totalPages - shown })}
               </p>
             )}
           </div>

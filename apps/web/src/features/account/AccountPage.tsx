@@ -16,9 +16,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { endSession, startSession } from '@/features/session/actions'
 import { pinErrorMessage } from '@/features/kid/pinErrors'
+import { useT } from '@/i18n'
 import { formatDate, formatIdr } from '@/lib/format'
 
 export function AccountPage() {
+  const { t } = useT()
   const me = useMe()
 
   if (me.isPending) return <Loading />
@@ -29,13 +31,13 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="text-xl font-semibold">Account</h1>
+      <h1 className="text-xl font-semibold">{t('account.title')}</h1>
 
       <Card>
         <CardHeader>
           <CardTitle>{user.name}</CardTitle>
           <CardDescription>
-            {user.email} · {user.role}
+            {user.email} · {t(user.role === 'parent' ? 'role.parent' : 'role.creator')}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -45,13 +47,14 @@ export function AccountPage() {
       {isParent && <OrdersCard />}
 
       <Button variant="outline" className="self-start" onClick={endSession}>
-        <LogOut /> Log out
+        <LogOut /> {t('account.logout')}
       </Button>
     </div>
   )
 }
 
 function SubscriptionCard({ subscription }: { subscription: NonNullable<ReturnType<typeof useMe>['data']>['subscription'] }) {
+  const { t } = useT()
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
 
@@ -66,29 +69,32 @@ function SubscriptionCard({ subscription }: { subscription: NonNullable<ReturnTy
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Subscription</CardTitle>
+        <CardTitle>{t('account.sub.title')}</CardTitle>
         <CardDescription>
           {subscription.active
-            ? `${subscription.planName} · ${subscription.cancelAtPeriodEnd ? 'ends' : 'active until'} ${formatDate(subscription.endsAt!)}`
-            : 'You are not subscribed.'}
+            ? t(subscription.cancelAtPeriodEnd ? 'account.sub.endsOn' : 'account.sub.activeUntil', {
+                plan: subscription.planName ?? '',
+                date: formatDate(subscription.endsAt!),
+              })
+            : t('account.sub.none')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {subscription.active && subscription.cancelAtPeriodEnd && (
           <Alert>
             <AlertDescription>
-              Cancelled. You can keep reading until {formatDate(subscription.endsAt!)}. Books you bought stay yours.
+              {t('account.sub.cancelled', { date: formatDate(subscription.endsAt!) })}
             </AlertDescription>
           </Alert>
         )}
         {subscription.active && !subscription.cancelAtPeriodEnd && (
           <Button variant="outline" className="self-start" onClick={() => setConfirming(true)}>
-            Cancel subscription
+            {t('account.sub.cancel')}
           </Button>
         )}
         {!subscription.active && (
           <Button className="self-start" render={<Link to="/checkout/subscription" />} nativeButton={false}>
-            Subscribe
+            {t('account.sub.subscribe')}
           </Button>
         )}
       </CardContent>
@@ -96,19 +102,20 @@ function SubscriptionCard({ subscription }: { subscription: NonNullable<ReturnTy
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel your subscription?</DialogTitle>
+            <DialogTitle>{t('account.sub.dialogTitle')}</DialogTitle>
             <DialogDescription>
-              You keep access until {subscription.endsAt ? formatDate(subscription.endsAt) : 'the end of the period'}. There
-              is no refund, and books you bought stay yours.
+              {t('account.sub.dialogBody', {
+                date: subscription.endsAt ? formatDate(subscription.endsAt) : t('account.sub.dialogNoDate'),
+              })}
             </DialogDescription>
           </DialogHeader>
           {cancel.isError && <ErrorNotice error={cancel.error} />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirming(false)}>
-              Keep it
+              {t('account.sub.keep')}
             </Button>
             <LoadingButton variant="destructive" pending={cancel.isPending} onClick={() => cancel.mutate()}>
-              Cancel subscription
+              {t('account.sub.cancel')}
             </LoadingButton>
           </DialogFooter>
         </DialogContent>
@@ -118,6 +125,7 @@ function SubscriptionCard({ subscription }: { subscription: NonNullable<ReturnTy
 }
 
 function KidModeCard({ pinSet }: { pinSet: boolean }) {
+  const { t } = useT()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [currentPin, setCurrentPin] = useState('')
@@ -152,19 +160,17 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Smile className="size-4" /> Kid mode
+          <Smile className="size-4" /> {t('account.kid.title')}
         </CardTitle>
         <CardDescription>
-          {pinSet
-            ? 'Hand the device to your child. Books they can read show up with no prices or buy buttons. Your PIN brings you back.'
-            : 'Set a 4 to 6 digit PIN first. It is the only way back out of Kid mode.'}
+          {pinSet ? t('account.kid.withPin') : t('account.kid.noPin')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {enter.isError && <ErrorNotice error={enter.error} title="Could not start Kid mode" />}
+        {enter.isError && <ErrorNotice error={enter.error} title={t('account.kid.error')} />}
         {pinSet && (
           <LoadingButton size="lg" className="self-start" pending={enter.isPending} onClick={() => enter.mutate()}>
-            {!enter.isPending && <Smile />} Start Kid mode
+            {!enter.isPending && <Smile />} {t('account.kid.start')}
           </LoadingButton>
         )}
 
@@ -176,25 +182,25 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
             if (canSave) save.mutate()
           }}
         >
-          <p className="text-sm font-medium">{pinSet ? 'Change PIN' : 'Set a PIN'}</p>
+          <p className="text-sm font-medium">{pinSet ? t('account.pin.change') : t('account.pin.set')}</p>
           {pinSet && (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="current-pin">Current PIN</Label>
+              <Label htmlFor="current-pin">{t('account.pin.current')}</Label>
               <Input id="current-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={currentPin} onChange={(e) => setCurrentPin(e.target.value)} />
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="new-pin">New PIN</Label>
+              <Label htmlFor="new-pin">{t('account.pin.new')}</Label>
               <Input id="new-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={pin} onChange={(e) => setPin(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirm-pin">Repeat new PIN</Label>
+              <Label htmlFor="confirm-pin">{t('account.pin.repeat')}</Label>
               <Input id="confirm-pin" type="password" inputMode="numeric" autoComplete="off" maxLength={PIN_LENGTH} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </div>
           </div>
-          {pin && !/^\d{4}$/.test(pin) && <p className="text-xs text-destructive">Use exactly 4 digits.</p>}
-          {confirm && pin !== confirm && <p className="text-xs text-destructive">The two PINs do not match.</p>}
+          {pin && !/^\d{4}$/.test(pin) && <p className="text-xs text-destructive">{t('account.pin.digits')}</p>}
+          {confirm && pin !== confirm && <p className="text-xs text-destructive">{t('account.pin.mismatch')}</p>}
           {save.isError && (
             <Alert variant="destructive">
               <AlertDescription>{pinErrorMessage(save.error)}</AlertDescription>
@@ -202,11 +208,11 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
           )}
           {saved && (
             <Alert>
-              <AlertDescription>PIN saved.</AlertDescription>
+              <AlertDescription>{t('account.pin.saved')}</AlertDescription>
             </Alert>
           )}
           <LoadingButton type="submit" variant="secondary" className="self-start" pending={save.isPending} disabled={!canSave}>
-            {pinSet ? 'Change PIN' : 'Save PIN'}
+            {pinSet ? t('account.pin.change') : t('account.pin.save')}
           </LoadingButton>
         </form>
       </CardContent>
@@ -215,26 +221,27 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
 }
 
 function OrdersCard() {
+  const { t } = useT()
   const orders = useOrders()
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Orders</CardTitle>
+        <CardTitle>{t('account.orders.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         {orders.isPending && <Loading />}
         {orders.isError && <ErrorNotice error={orders.error} />}
-        {orders.data && orders.data.orders.length === 0 && <p className="text-sm text-muted-foreground">No orders yet.</p>}
+        {orders.data && orders.data.orders.length === 0 && <p className="text-sm text-muted-foreground">{t('account.orders.empty')}</p>}
         {orders.data && orders.data.orders.length > 0 && (
           <ul className="flex flex-col divide-y">
             {orders.data.orders.map((o) => (
               <li key={o.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium">{o.bookTitle ?? `${o.planName} subscription`}</span>
+                  <span className="truncate font-medium">{o.bookTitle ?? t('checkout.subTitle', { plan: o.planName ?? '' })}</span>
                   <span className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={o.status === 'paid' ? 'default' : o.status === 'failed' ? 'destructive' : 'secondary'}>{o.status}</Badge>
+                  <Badge variant={o.status === 'paid' ? 'default' : o.status === 'failed' ? 'destructive' : 'secondary'}>{t(`order.${o.status}` as const)}</Badge>
                   <span className="w-24 text-right tabular-nums">{formatIdr(o.amountIdr)}</span>
                 </div>
               </li>

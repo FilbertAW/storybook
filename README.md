@@ -25,6 +25,10 @@ pnpm web dev          # web on http://localhost:5173
 
 Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test` (API tests, in-memory SQLite).
 
+## Languages
+
+The app is in Indonesian by default and can be switched to English with the **ID | EN** toggle (top right, on the sign-in page and in Kid mode too). The choice is remembered in the browser. Texts live in `apps/web/src/i18n` (`en.ts` defines the keys, `id.ts` must translate every one). API error codes are translated in the client, so error messages follow the chosen language. Book titles and descriptions are content from the seed data and stay in English.
+
 ## Account credentials
 
 The sign-in page only asks for an email. Login is a mock, so there is no password. Use one of the seeded accounts:

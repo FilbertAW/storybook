@@ -5,15 +5,16 @@ import type { BookSummaryDto } from '@storylib/shared'
 import { BookCard } from '@/components/BookCard'
 import { Empty, ErrorNotice, Loading } from '@/components/PageState'
 import { Input } from '@/components/ui/input'
+import { type TranslationKey, useT } from '@/i18n'
 import { BookPreviewDialog } from '@/features/library/BookPreviewDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type Tab = 'all' | 'full' | 'locked'
 
-const TABS: Array<{ value: Tab; label: string; empty: string }> = [
-  { value: 'all', label: 'All', empty: 'No books match your search.' },
-  { value: 'full', label: 'My books', empty: 'You can read none of these yet. Buy a book or subscribe to start.' },
-  { value: 'locked', label: 'Locked', empty: 'Nothing is locked. You can read everything here.' },
+const TABS: Array<{ value: Tab; label: TranslationKey; empty: TranslationKey }> = [
+  { value: 'all', label: 'library.tab.all', empty: 'library.empty.all' },
+  { value: 'full', label: 'library.tab.full', empty: 'library.empty.full' },
+  { value: 'locked', label: 'library.tab.locked', empty: 'library.empty.locked' },
 ]
 
 function useDebounced<T>(value: T, ms: number) {
@@ -26,23 +27,24 @@ function useDebounced<T>(value: T, ms: number) {
 }
 
 export function LibraryPage() {
+  const { t } = useT()
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
   const [previewing, setPreviewing] = useState<BookSummaryDto | null>(null)
   const q = useDebounced(search.trim(), 300)
 
   const books = useBooks({ access: tab, q: q || undefined })
-  const emptyText = TABS.find((t) => t.value === tab)!.empty
+  const emptyKey = TABS.find((x) => x.value === tab)!.empty
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">Library</h1>
+        <h1 className="text-xl font-semibold">{t('library.title')}</h1>
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList>
-            {TABS.map((t) => (
-              <TabsTrigger key={t.value} value={t.value}>
-                {t.label}
+            {TABS.map((x) => (
+              <TabsTrigger key={x.value} value={x.value}>
+                {t(x.label)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -52,8 +54,8 @@ export function LibraryPage() {
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search title or author"
-              aria-label="Search"
+              placeholder={t('library.searchPlaceholder')}
+              aria-label={t('library.search')}
               className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -63,13 +65,13 @@ export function LibraryPage() {
       </div>
 
       {books.isPending && <Loading />}
-      {books.isError && <ErrorNotice error={books.error} title="Could not load books" />}
+      {books.isError && <ErrorNotice error={books.error} title={t('library.loadError')} />}
       {books.data && (
         // The previous results stay on screen while a new tab or search loads; dim them and say so.
         <div className="relative" aria-busy={books.isPlaceholderData}>
           <div className={books.isPlaceholderData ? 'pointer-events-none opacity-40 transition-opacity' : 'transition-opacity'}>
             {books.data.books.length === 0 ? (
-              <Empty>{emptyText}</Empty>
+              <Empty>{t(emptyKey)}</Empty>
             ) : (
               <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
                 {books.data.books.map((book) => (
@@ -81,7 +83,7 @@ export function LibraryPage() {
           {books.isPlaceholderData && (
             <div role="status" className="absolute inset-x-0 top-12 flex justify-center">
               <span className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm shadow-sm">
-                <Loader2 className="size-4 animate-spin" /> Updating books…
+                <Loader2 className="size-4 animate-spin" /> {t('library.updating')}
               </span>
             </div>
           )}

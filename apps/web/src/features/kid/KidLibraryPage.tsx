@@ -1,13 +1,15 @@
 import { Link } from 'react-router'
 import { useBooks } from '@/api/queries'
 import { Empty, ErrorNotice, Loading } from '@/components/PageState'
+import { useT } from '@/i18n'
 
 export function KidLibraryPage() {
+  const { t } = useT()
   const books = useBooks({})
 
   if (books.isPending) return <Loading />
-  if (books.isError) return <ErrorNotice error={books.error} title="Could not load books" />
-  if (books.data.books.length === 0) return <Empty>No books to read yet. Ask a grown-up to unlock some.</Empty>
+  if (books.isError) return <ErrorNotice error={books.error} title={t('library.loadError')} />
+  if (books.data.books.length === 0) return <Empty>{t('kid.empty')}</Empty>
 
   return (
     <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">

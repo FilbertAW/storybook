@@ -10,6 +10,7 @@ import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useT } from '@/i18n'
 import { formatDate, formatIdr } from '@/lib/format'
 import type { OrderDto } from '@storylib/shared'
 
@@ -18,6 +19,7 @@ type Phase = 'review' | 'warning' | 'payment' | 'success' | 'failed'
 // Buying a book (/checkout/book/:id) and subscribing (/checkout/subscription) share one flow:
 // review -> (overlap warning) -> mock payment -> result.
 export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
+  const { t } = useT()
   const { id } = useParams()
   const queryClient = useQueryClient()
   const book = useBook(kind === 'book' ? id : undefined)
@@ -67,11 +69,11 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
   })
 
   if (kind === 'book' && book.isPending) return <Loading />
-  if (kind === 'book' && book.isError) return <ErrorNotice error={book.error} title="This book is not available" />
+  if (kind === 'book' && book.isError) return <ErrorNotice error={book.error} title={t('book.unavailable')} />
   if (kind === 'subscription' && plans.isPending) return <Loading />
-  if (kind === 'subscription' && !plan) return <ErrorNotice error={plans.error ?? new Error('No plan is available.')} />
+  if (kind === 'subscription' && !plan) return <ErrorNotice error={plans.error} message={plans.error ? undefined : t('error.noPlan')} />
 
-  const title = kind === 'book' ? book.data!.title : `${plan!.name} subscription`
+  const title = kind === 'book' ? book.data!.title : t('checkout.subTitle', { plan: plan!.name })
   const amount = kind === 'book' ? book.data!.priceIdr! : plan!.priceIdr
   const backTo = kind === 'book' ? `/books/${id}` : '/account'
   const blockingError = createOrder.isError && !(createOrder.error instanceof ApiError && createOrder.error.code === 'SUBSCRIPTION_OVERLAP_ACK_REQUIRED')
@@ -89,29 +91,29 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="size-4" /> Checkout
+            <CreditCard className="size-4" /> {t('checkout.title')}
           </CardTitle>
           <CardDescription>
-            {kind === 'book' ? 'One-time purchase. The book stays yours.' : `Billed once for ${plan!.periodDays} days. No auto-renewal.`}
+            {kind === 'book' ? t('checkout.bookNote') : t('checkout.subNote', { days: plan!.periodDays })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
           {kind === 'book' && <img src={book.data!.coverUrl} alt="" className="h-20 w-15 rounded-md bg-muted object-cover" />}
           <div className="flex flex-1 flex-col">
             <span className="font-medium">{title}</span>
-            <span className="text-sm text-muted-foreground">{kind === 'book' ? `by ${book.data!.authorName}` : 'Unlimited reading of the catalog'}</span>
+            <span className="text-sm text-muted-foreground">{kind === 'book' ? t('checkout.by', { author: book.data!.authorName }) : t('checkout.catalog')}</span>
           </div>
           <span className="font-semibold">{formatIdr(amount)}</span>
         </CardContent>
 
         {phase === 'review' && (
           <CardFooter className="flex-col items-stretch gap-3">
-            {blockingError && <ErrorNotice error={createOrder.error} title="This can't be bought" />}
+            {blockingError && <ErrorNotice error={createOrder.error} title={t('checkout.blocked')} />}
             <LoadingButton size="lg" pending={createOrder.isPending} onClick={() => createOrder.mutate(false)}>
-              Continue to payment
+              {t('checkout.continue')}
             </LoadingButton>
             <Button variant="ghost" render={<Link to={backTo} />} nativeButton={false}>
-              Cancel
+              {t('common.cancel')}
             </Button>
           </CardFooter>
         )}
@@ -120,17 +122,16 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
           <CardFooter className="flex-col items-stretch gap-3">
             <Alert>
               <TriangleAlert />
-              <AlertTitle>You already have a subscription</AlertTitle>
+              <AlertTitle>{t('checkout.warning.title')}</AlertTitle>
               <AlertDescription>
-                Your subscription runs until {endsAt ? formatDate(endsAt) : 'its end date'}. Buying this book does not
-                refund or change it. The book will stay yours after the subscription ends, and even if the creator removes it.
+                {t('checkout.warning.body', { date: endsAt ? formatDate(endsAt) : t('checkout.warning.noDate') })}
               </AlertDescription>
             </Alert>
             <LoadingButton size="lg" pending={createOrder.isPending} onClick={() => createOrder.mutate(true)}>
-              Buy it anyway
+              {t('checkout.buyAnyway')}
             </LoadingButton>
             <Button variant="ghost" render={<Link to={backTo} />} nativeButton={false}>
-              Not now
+              {t('checkout.notNow')}
             </Button>
           </CardFooter>
         )}
@@ -138,10 +139,10 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
         {phase === 'payment' && order && (
           <CardFooter className="flex-col items-stretch gap-3">
             {pay.isError && !(pay.error instanceof ApiError && pay.error.code === 'PAYMENT_FAILED') && (
-              <ErrorNotice error={pay.error} title="Payment error" />
+              <ErrorNotice error={pay.error} title={t('checkout.payError')} />
             )}
             <LoadingButton size="lg" pending={pay.isPending} onClick={() => pay.mutate('success')}>
-              Pay {formatIdr(order.amountIdr)}
+              {t('checkout.pay', { amount: formatIdr(order.amountIdr) })}
             </LoadingButton>
             {/* To demo a failed payment, add a second button here:
                 <Button variant="outline" disabled={pay.isPending} onClick={() => pay.mutate('fail')}>
@@ -155,13 +156,13 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
           <CardFooter className="flex-col items-stretch gap-3">
             <Alert>
               <CheckCircle2 />
-              <AlertTitle>Payment received</AlertTitle>
+              <AlertTitle>{t('checkout.success.title')}</AlertTitle>
               <AlertDescription>
-                {kind === 'book' ? 'The book is yours.' : 'Your subscription is active. The whole catalog is open.'}
+                {kind === 'book' ? t('checkout.success.book') : t('checkout.success.sub')}
               </AlertDescription>
             </Alert>
             <Button size="lg" render={<Link to={kind === 'book' ? `/books/${id}/read` : '/'} />} nativeButton={false}>
-              {kind === 'book' ? 'Start reading' : 'Browse the library'}
+              {kind === 'book' ? t('checkout.startReading') : t('checkout.browse')}
             </Button>
           </CardFooter>
         )}
@@ -170,14 +171,14 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
           <CardFooter className="flex-col items-stretch gap-3">
             <Alert variant="destructive">
               <XCircle />
-              <AlertTitle>Payment failed</AlertTitle>
-              <AlertDescription>You were not charged and nothing was unlocked. You can try again.</AlertDescription>
+              <AlertTitle>{t('checkout.failed.title')}</AlertTitle>
+              <AlertDescription>{t('checkout.failed.body')}</AlertDescription>
             </Alert>
             <Button size="lg" onClick={retry}>
-              Try again
+              {t('checkout.tryAgain')}
             </Button>
             <Button variant="ghost" render={<Link to={backTo} />} nativeButton={false}>
-              Cancel
+              {t('common.cancel')}
             </Button>
           </CardFooter>
         )}

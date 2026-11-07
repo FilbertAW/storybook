@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router'
 import { setUnauthenticatedHandler } from '@/api/client'
 import { queryClient } from '@/app/queryClient'
 import { router } from '@/app/router'
+import { LocaleEffect } from '@/components/LanguageSwitch'
 import { endSession } from '@/features/session/actions'
 import './index.css'
 
@@ -14,6 +15,7 @@ setUnauthenticatedHandler(endSession)
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <LocaleEffect />
       <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,
