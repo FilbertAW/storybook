@@ -82,6 +82,7 @@ export const newBook = (overrides: Record<string, unknown> = {}) => ({
   title: 'The Brave Little Gecko',
   description: 'A gecko finds courage on a stormy night.',
   coverUrl: 'https://picsum.photos/seed/gecko-cover/600/800',
+  language: 'en',
   ageMin: 3,
   ageMax: 6,
   priceIdr: 18_000,

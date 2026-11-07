@@ -1,4 +1,4 @@
-import { BASE_LOCALE, type CreateOrderRequest, type Locale, type OrderDto, type OrdersResponse, type PlansResponse } from '@storylib/shared';
+import type { CreateOrderRequest, OrderDto, OrdersResponse, PlansResponse } from '@storylib/shared';
 import type { UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
@@ -48,20 +48,8 @@ export class CheckoutService {
     };
   }
 
-  // Book titles are shown in the reader's language, like everywhere else.
-  async listOrders(user: UserRow, locale: Locale = BASE_LOCALE): Promise<OrdersResponse> {
-    const rows = await this.orders.listByUser(user.id);
-    const titles = await this.books.translations(
-      rows.flatMap((o) => (o.bookId ? [o.bookId] : [])),
-      locale,
-    );
-    return {
-      orders: rows.map((o) => {
-        const dto = toOrderDto(o);
-        const translated = o.bookId ? titles.get(o.bookId)?.title : undefined;
-        return translated ? { ...dto, bookTitle: translated } : dto;
-      }),
-    };
+  async listOrders(user: UserRow): Promise<OrdersResponse> {
+    return { orders: (await this.orders.listByUser(user.id)).map(toOrderDto) };
   }
 
   // The same Idempotency-Key returns the same order, so a double-click or a retry

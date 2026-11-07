@@ -113,6 +113,26 @@ describe('POST /books', () => {
   });
 });
 
+describe('a book language', () => {
+  it('is required, and must be Indonesian or English', async () => {
+    const withoutLanguage = { ...newBook(), language: undefined };
+    const missing = await t.request('/books', { method: 'POST', token: sari, json: withoutLanguage });
+    expect(missing.status).toBe(400);
+    const unknown = await t.request('/books', { method: 'POST', token: sari, json: newBook({ language: 'fr' }) });
+    expect(unknown.status).toBe(400);
+    const ok = await t.request('/books', { method: 'POST', token: sari, json: newBook({ language: 'id' }) });
+    expect(ok.status).toBe(201);
+    expect(ok.body.language).toBe('id');
+  });
+
+  it('can be changed by the creator', async () => {
+    const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');
+    const res = await t.request(`/books/${id}`, { method: 'PATCH', token: sari, json: { language: 'id' } });
+    expect(res.status).toBe(200);
+    expect(res.body.language).toBe('id');
+  });
+});
+
 describe('PATCH /books/:id', () => {
   it('edits fields, replaces pages', async () => {
     const id = await bookIdByTitle(sari, 'Kiko the Little Firefly');

@@ -64,8 +64,6 @@ export const checkoutApi = {
 
 export const creatorApi = {
   list: () => request('/creator/books', creatorBooksResponseSchema),
-  // The original text plus the Indonesian version: what the edit form works on.
-  get: (id: string) => request(`/creator/books/${id}`, creatorBookWithPagesSchema),
   create: (body: CreateBookRequest) =>
     request('/books', creatorBookWithPagesSchema, { method: 'POST', json: body }),
   update: (id: string, body: UpdateBookRequest) =>

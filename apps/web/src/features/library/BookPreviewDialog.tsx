@@ -44,7 +44,8 @@ export function BookPreviewDialog({ book, onClose }: { book: BookSummaryDto; onC
         <DialogHeader className="pr-8">
           <DialogTitle className="text-lg leading-snug">{book.title}</DialogTitle>
           <DialogDescription>
-            {book.authorName} · {t('book.ages', { min: book.ageMin, max: book.ageMax })}
+            {book.authorName} · {t('book.ages', { min: book.ageMin, max: book.ageMax })} ·{' '}
+            {t(book.language === 'id' ? 'book.lang.id' : 'book.lang.en')}
           </DialogDescription>
         </DialogHeader>
 

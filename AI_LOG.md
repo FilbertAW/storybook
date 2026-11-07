@@ -187,3 +187,13 @@ The AI-usage slide is written from this file.
 **Bug caught on the way:** the edit form loaded pages through the reader endpoint, which since the previous change returns the reader's language. In Indonesian it would have loaded Indonesian text and saved it over the original. The form now uses the creator endpoint, which ignores the language header (tested).
 
 **Verified:** 209 API tests (10 new), typecheck, lint, build. **Not verified:** the form in a browser.
+
+## Follow-up: books are content, not translated (reverts the translated-books work)
+
+**Prompt:** Changing the language in the library does not re-render the books, and it may be better to have some books in English and some in Indonesian, not translatable: the translation is for the website, not the product.
+
+**Decision (the user's, which I agree with):** book text is content that a creator writes in one language; the app does not translate it. The two translation features were reverted (`git revert` of 60ab4c7, dd887c3 and d6c77b5): the `book_translations` tables, the `Accept-Language` middleware, the translated reads, and the creator's Indonesian fields. That also removes the language-dependent query keys behind the "books do not re-render" complaint: book data no longer depends on the UI language.
+
+**Produced instead:** `books.language` (`id` or `en`, checked in the schema and required when creating a book). The seed is a mix: Mimi, the Banyan Tree and Dino are Indonesian originals, the other four English. Cards, the book page and the preview show the book's language; the creator form has a language select that starts at the app's current language. The initial migration was regenerated (nothing in production beyond demo data) and Turso was reset and reseeded. Website texts stay translated (ID | EN toggle).
+
+**Not verified:** how it looks on screen.

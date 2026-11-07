@@ -33,5 +33,5 @@ export function ordersRoutes(service: CheckoutService) {
       zValidator('json', payOrderRequestSchema, validationHook),
       async (c) => c.json(await service.pay(c.get('user'), c.req.param('id'), c.req.valid('json').simulate)),
     )
-    .get('/', requireRole('parent'), async (c) => c.json(await service.listOrders(c.get('user'), c.get('locale'))));
+    .get('/', requireRole('parent'), async (c) => c.json(await service.listOrders(c.get('user'))));
 }

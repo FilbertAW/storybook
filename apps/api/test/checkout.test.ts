@@ -28,7 +28,7 @@ const SARI = 'sari@example.com';
 
 const KIKO = 'Kiko the Little Firefly'; // 15.000, bought by A
 const RAINY = 'The Rainy Day Parade'; // 15.000
-const MIMI = 'Mimi and the Moon Cake'; // 20.000
+const MIMI = 'Mimi dan Kue Bulan'; // 20.000
 const KITE = 'The Lost Kite'; // archived, bought by C
 
 const DAY_MS = 24 * 60 * 60 * 1000;

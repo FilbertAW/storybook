@@ -1,4 +1,3 @@
-import type { Locale } from '@storylib/shared';
 import type { users } from '../db/schema';
 
 export type UserRow = typeof users.$inferSelect;
@@ -9,6 +8,5 @@ export type AppEnv = {
   Variables: {
     user: UserRow;
     scope: Scope;
-    locale: Locale;
   };
 };

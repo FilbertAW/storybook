@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c62c632a-003b-43ac-914b-f2ac05606be5",
+  "id": "fd7338e1-c8e2-4d08-9071-6bb3294d8d92",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "book_pages": {
@@ -122,6 +122,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "age_min": {
           "name": "age_min",
           "type": "integer",
@@ -215,6 +222,10 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "books_language_check": {
+          "name": "books_language_check",
+          "value": "\"books\".\"language\" in ('id', 'en')"
+        },
         "books_status_check": {
           "name": "books_status_check",
           "value": "\"books\".\"status\" in ('published', 'archived')"

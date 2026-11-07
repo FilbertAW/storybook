@@ -1,11 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createBookRequestSchema } from '@storylib/shared'
+import { createBookRequestSchema, type BookLanguage } from '@storylib/shared'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ApiError } from '@/api/errors'
 import { creatorApi } from '@/api/endpoints'
-import { keys, useCreatorBook } from '@/api/queries'
+import { keys, useBookPages, useCreatorBooks } from '@/api/queries'
 import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -14,12 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { type TranslationKey, useT } from '@/i18n'
+import { type TranslationKey, useLocaleStore, useT } from '@/i18n'
 
 interface PageDraft {
   text: string
   imageUrl: string
-  idText: string // the page in Indonesian, '' for none
 }
 
 interface FormValues {
@@ -27,31 +25,29 @@ interface FormValues {
   authorName: string
   description: string
   coverUrl: string
+  language: BookLanguage
   ageMin: string
   ageMax: string
   priceIdr: string
   previewPageCount: string
-  idTitle: string
-  idDescription: string
   pages: PageDraft[]
 }
 
 // Placeholder pictures so a new book can be filled in quickly; the creator can paste real URLs.
 const sample = (seed: string, size: string) => `https://picsum.photos/seed/${seed}/${size}`
 const randomSeed = () => Math.random().toString(36).slice(2, 8)
-const newPage = (): PageDraft => ({ text: '', imageUrl: sample(randomSeed(), '800/600'), idText: '' })
+const newPage = (): PageDraft => ({ text: '', imageUrl: sample(randomSeed(), '800/600') })
 
-const blank = (): FormValues => ({
+const blank = (language: BookLanguage): FormValues => ({
   title: '',
   authorName: '',
   description: '',
   coverUrl: sample(randomSeed(), '600/800'),
+  language,
   ageMin: '3',
   ageMax: '6',
   priceIdr: '15000',
   previewPageCount: '2',
-  idTitle: '',
-  idDescription: '',
   pages: [newPage(), newPage()],
 })
 
@@ -60,6 +56,7 @@ const FIELD_LABEL: Record<string, TranslationKey> = {
   authorName: 'form.author',
   description: 'form.description',
   coverUrl: 'form.cover',
+  language: 'form.language',
   ageMin: 'form.ageMin',
   ageMax: 'form.ageMax',
   priceIdr: 'form.price',
@@ -70,21 +67,17 @@ export function BookFormPage() {
   const { t } = useT()
   const { id } = useParams()
   const editing = !!id
-  // The creator's own copy: the original text, whatever language the app is shown in.
-  const loaded = useCreatorBook(id)
+  const books = useCreatorBooks()
+  const pages = useBookPages(id)
 
-  if (!editing) return <BookForm initial={blank()} />
-  if (loaded.isPending) return <Loading />
-  if (loaded.isError) {
-    return loaded.error instanceof ApiError && loaded.error.code === 'NOT_FOUND' ? (
-      <ErrorNotice message={t('form.bookNotFound')} title={t('common.notFound')} />
-    ) : (
-      <ErrorNotice error={loaded.error} />
-    )
-  }
+  // A new book starts in the language the app is shown in.
+  if (!editing) return <BookForm initial={blank(useLocaleStore.getState().locale)} />
+  if (books.isPending || pages.isPending) return <Loading />
+  if (books.isError) return <ErrorNotice error={books.error} />
+  if (pages.isError) return <ErrorNotice error={pages.error} />
 
-  const book = loaded.data
-  const idVersion = book.translations.id
+  const book = books.data.books.find((b) => b.id === id)
+  if (!book) return <ErrorNotice message={t('form.bookNotFound')} title={t('common.notFound')} />
 
   return (
     <BookForm
@@ -94,13 +87,12 @@ export function BookFormPage() {
         authorName: book.authorName,
         description: book.description,
         coverUrl: book.coverUrl,
+        language: book.language,
         ageMin: String(book.ageMin),
         ageMax: String(book.ageMax),
         priceIdr: String(book.priceIdr),
         previewPageCount: String(book.previewPageCount),
-        idTitle: idVersion?.title ?? '',
-        idDescription: idVersion?.description ?? '',
-        pages: book.pages.map((p, i) => ({ text: p.text, imageUrl: p.imageUrl, idText: idVersion?.pages[i] ?? '' })),
+        pages: pages.data.pages.map((p) => ({ text: p.text, imageUrl: p.imageUrl })),
       }}
     />
   )
@@ -138,22 +130,18 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
       authorName: values.authorName.trim() || undefined,
       description: values.description,
       coverUrl: values.coverUrl,
+      language: values.language,
       ageMin: Number(values.ageMin),
       ageMax: Number(values.ageMax),
       priceIdr: Number(values.priceIdr),
       previewPageCount: Number(values.previewPageCount),
-      pages: values.pages.map((p) => ({ text: p.text, imageUrl: p.imageUrl })),
-      // Always sent, so emptying the fields removes an existing translation.
-      translations: {
-        id: { title: values.idTitle, description: values.idDescription, pages: values.pages.map((p) => p.idText) },
-      },
+      pages: values.pages,
     })
     if (!result.success) {
       setProblems(
         result.error.issues.map((issue) => {
           const [head, index, sub] = issue.path
           if (head === 'ageMax' && issue.code === 'custom') return t('form.ageRange')
-          if (head === 'translations') return t('form.translationPair')
           const field =
             head === 'pages' && typeof index === 'number'
               ? t(sub === 'imageUrl' ? 'form.pageImage' : 'form.pageText', { n: index + 1 })
@@ -188,6 +176,17 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
             <Field label={t('form.description')} id="description">
               <Textarea id="description" rows={3} value={values.description} onChange={(e) => set('description', e.target.value)} />
             </Field>
+            <Field label={t('form.language')} id="language">
+              <select
+                id="language"
+                value={values.language}
+                onChange={(e) => set('language', e.target.value as BookLanguage)}
+                className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+              >
+                <option value="id">{t('book.lang.id')}</option>
+                <option value="en">{t('book.lang.en')}</option>
+              </select>
+            </Field>
             <Field label={t('form.cover')} id="cover">
               <Input id="cover" value={values.coverUrl} onChange={(e) => set('coverUrl', e.target.value)} />
             </Field>
@@ -205,21 +204,6 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
                 <Input id="preview" type="number" min={0} value={values.previewPageCount} onChange={(e) => set('previewPageCount', e.target.value)} />
               </Field>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('form.idSection')}</CardTitle>
-            <p className="text-sm text-muted-foreground">{t('form.idHint')}</p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Field label={t('form.idTitle')} id="id-title">
-              <Input id="id-title" value={values.idTitle} onChange={(e) => set('idTitle', e.target.value)} />
-            </Field>
-            <Field label={t('form.idDescription')} id="id-description">
-              <Textarea id="id-description" rows={3} value={values.idDescription} onChange={(e) => set('idDescription', e.target.value)} />
-            </Field>
           </CardContent>
         </Card>
 
@@ -244,7 +228,6 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
                   </Button>
                 </div>
                 <Textarea aria-label={t('form.pageText', { n: i + 1 })} rows={2} placeholder={t('form.storyPlaceholder')} value={page.text} onChange={(e) => setPage(i, { text: e.target.value })} />
-                <Textarea aria-label={t('form.idPageText', { n: i + 1 })} rows={2} placeholder={t('form.idPagePlaceholder')} value={page.idText} onChange={(e) => setPage(i, { idText: e.target.value })} />
                 <Input aria-label={t('form.pageImage', { n: i + 1 })} placeholder={t('form.imagePlaceholder')} value={page.imageUrl} onChange={(e) => setPage(i, { imageUrl: e.target.value })} />
               </div>
             ))}

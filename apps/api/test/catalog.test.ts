@@ -15,7 +15,7 @@ const SARI = 'sari@example.com';
 
 const KIKO = 'Kiko the Little Firefly';
 const RAINY = 'The Rainy Day Parade';
-const MIMI = 'Mimi and the Moon Cake';
+const MIMI = 'Mimi dan Kue Bulan';
 const KITE = 'The Lost Kite'; // archived
 
 let t: TestApp;
@@ -37,8 +37,8 @@ describe('GET /books', () => {
     const books = await list(PARENT_A);
     expect(titles(books)).toEqual([
       'A Boat Called Bintang',
-      "Dino's First Day at School",
-      'The Sleepy Banyan Tree',
+      'Hari Pertama Dino di Sekolah',
+      'Pohon Beringin yang Mengantuk',
       MIMI,
       RAINY,
       KIKO,
@@ -52,6 +52,13 @@ describe('GET /books', () => {
   it('never lists a retired book the parent did not buy', async () => {
     const seen = titles(await list(PARENT_A));
     expect(seen).not.toContain(KITE);
+  });
+
+  it('mixes books in English and Indonesian, and each one says which', async () => {
+    const books = await list(PARENT_A);
+    expect(new Set(books.map((b) => b.language))).toEqual(new Set(['en', 'id']));
+    expect(byTitle(books, KIKO).language).toBe('en');
+    expect(byTitle(books, MIMI).language).toBe('id');
   });
 
   it('opens every published book to an active subscriber, but not a retired one', async () => {
@@ -83,7 +90,7 @@ describe('GET /books', () => {
     });
 
     it('q matches title or author, ignoring case', async () => {
-      expect(titles(await list(PARENT_A, '?q=MOON'))).toEqual([MIMI]);
+      expect(titles(await list(PARENT_A, '?q=KUE'))).toEqual([MIMI]);
       expect(titles(await list(PARENT_A, '?q=budi'))).toHaveLength(3);
     });
 
@@ -95,7 +102,7 @@ describe('GET /books', () => {
     it('age keeps books whose range includes it', async () => {
       expect(titles(await list(PARENT_A, '?age=2'))).toEqual([RAINY]);
       expect((await list(PARENT_A, '?age=7')).map((b) => b.title).sort()).toEqual(
-        ['A Boat Called Bintang', "Dino's First Day at School", MIMI].sort(),
+        ['A Boat Called Bintang', 'Hari Pertama Dino di Sekolah', MIMI].sort(),
       );
     });
 

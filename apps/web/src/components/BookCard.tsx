@@ -27,7 +27,7 @@ export function BookCard({ book, onPreview }: { book: BookSummaryDto; onPreview?
       <div className="flex flex-col gap-0.5 px-0.5">
         <h3 className="line-clamp-2 text-sm leading-snug font-medium">{book.title}</h3>
         <p className="text-xs text-muted-foreground">
-          {t('book.ages', { min: book.ageMin, max: book.ageMax })}
+          {t('book.ages', { min: book.ageMin, max: book.ageMax })} · {t(book.language === 'id' ? 'book.lang.id' : 'book.lang.en')}
           {showPrice ? ` · ${formatIdr(book.priceIdr!)}` : ''}
         </p>
       </div>

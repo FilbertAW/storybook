@@ -1,5 +1,4 @@
 import { errorResponseSchema } from '@storylib/shared'
-import { useLocaleStore } from '@/i18n'
 import { useSessionStore } from '@/stores/session'
 import { ApiError } from './errors'
 
@@ -34,8 +33,6 @@ export async function request<T>(
     res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: {
-        // Books come back in this language; a book without a translation stays in its original.
-        'Accept-Language': useLocaleStore.getState().locale,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...headers,

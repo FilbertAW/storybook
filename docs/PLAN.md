@@ -138,25 +138,24 @@ Parent mode itself is the purchase gate, so checkout needs no extra adult check.
 
 ## Data model
 
-Ten SQLite tables (eight core, plus two for translations); the key split is **orders** (payment attempts, many, can fail) versus **purchases** and **subscriptions** (entitlements, what access reads). IDs are UUID text; timestamps are UTC epoch milliseconds; money is integer IDR.
+Eight SQLite tables; the key split is **orders** (payment attempts, many, can fail) versus **purchases** and **subscriptions** (entitlements, what access reads). IDs are UUID text; timestamps are UTC epoch milliseconds; money is integer IDR.
 
 | Table | Purpose | Key constraints | Edge cases it covers |
 | --- | --- | --- | --- |
 | users | Parents and creators | `email` unique; `role` in (parent, creator); `pin_hash` nullable | Role checks, Kid mode exit, PIN lockout |
-| books | Catalog items | `creator_id` → users; `status` in (published, archived); `price_idr` > 0; `preview_page_count` ≥ 0 | Archive instead of delete when there are buyers |
+| books | Catalog items | `creator_id` → users; `status` in (published, archived); `language` in (id, en); `price_idr` > 0; `preview_page_count` ≥ 0 | Archive instead of delete when there are buyers |
 | book\_pages | Book content | unique (`book_id`, `page_number`); cascade delete with book | Preview cut-off, locked pages by URL |
 | plans | Subscription offers | `price_idr` > 0; `period_days` > 0 | Price snapshot on orders |
 | subscriptions | Subscription entitlement | `user_id` → users; partial unique index on `user_id` where `status = 'active'` | One active subscription, expiry by date, cancel at period end |
 | orders | Every payment attempt | unique (`user_id`, `idempotency_key`); `type` = book needs `book_id`, `type` = subscription needs `plan_id`; `status` in (pending, paid, failed) | Double-click, failed and pending payments, price changes, buying while subscribed |
 | purchases | Book entitlement | unique (`user_id`, `book_id`); `order_id` → orders | Already owned, access survives archive and subscription end |
-| book\_translations, book\_page\_translations | A book's title, description and page text in Indonesian | Primary key (book, locale) and (page, locale); cascade with the book | Books readable in the parent's language; a missing translation falls back to the original |
 | events | Product analytics | indexed on (`name`, `created_at`) | Success metrics |
 
 ### Columns
 
 **users** — `id`, `email`, `name`, `role`, `pin_hash`, `pin_failed_attempts`, `pin_locked_until`, `created_at`
 
-**books** — `id`, `creator_id`, `title`, `author_name`, `description`, `cover_url`, `age_min`, `age_max`, `price_idr`, `status`, `preview_page_count` (default 2), `created_at`, `updated_at`, `archived_at`
+**books** — `id`, `creator_id`, `title`, `author_name`, `description`, `cover_url`, `language` (id, en), `age_min`, `age_max`, `price_idr`, `status`, `preview_page_count` (default 2), `created_at`, `updated_at`, `archived_at`
 
 **book\_pages** — `id`, `book_id`, `page_number`, `text`, `image_url`
 
@@ -200,9 +199,8 @@ REST under `/api/v1`, JSON in and out, a Bearer JWT on everything except login a
 | GET | /books/:id/pages | Any, incl. kid | Allowed pages; preview users get the first N plus `lockedFrom` and `totalPages` | 404 |
 | GET | /books/:id/pages/:n | Any, incl. kid | One page; past the preview without access → 403 | 403 `ENTITLEMENT_REQUIRED`, 404 |
 | GET | /creator/books | Creator | Own books in every status | 403 `FORBIDDEN_ROLE` |
-| GET | /creator/books/:id | Creator, owner | One own book with its pages in the original language plus the Indonesian version, for the edit form | 403, 404 |
-| POST | /books | Creator | Create a book with its pages and an optional Indonesian version; published immediately | 400, 403 |
-| PATCH | /books/:id | Creator, owner | Edit fields, replace pages, replace or clear the Indonesian version | 400, 403, 404 |
+| POST | /books | Creator | Create a book with its pages; published immediately | 400, 403 |
+| PATCH | /books/:id | Creator, owner | Edit fields and replace pages | 400, 403, 404 |
 | DELETE | /books/:id | Creator, owner | Hard delete if no orders, otherwise archive; returns `{ result: 'deleted' \| 'archived' }` | 403, 404 |
 | GET | /plans | Parent | Active subscription plans | — |
 | POST | /orders | Parent | `{ type: 'book', bookId, acknowledgeSubscriptionOverlap? }` or `{ type: 'subscription', planId }` + `Idempotency-Key` header → pending order | 400, 409 `ALREADY_OWNED` / `ALREADY_SUBSCRIBED` / `SUBSCRIPTION_OVERLAP_ACK_REQUIRED` / `BOOK_NOT_PURCHASABLE` |

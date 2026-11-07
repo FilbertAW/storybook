@@ -29,7 +29,6 @@ import { SubscriptionService } from './modules/subscriptions/subscriptions.servi
 import type { AppEnv } from './shared/app-env';
 import type { Clock, OffsetClock } from './shared/clock';
 import { errorHandler, notFoundHandler } from './shared/error-middleware';
-import { localeMiddleware } from './shared/locale';
 
 export interface AppDeps {
   corsOrigin: string;
@@ -69,7 +68,6 @@ export function createApp({ corsOrigin, jwtSecret, db, clock, gateway, devClock 
   app.onError(errorHandler);
   app.notFound(notFoundHandler);
   app.use('*', cors({ origin: corsOrigin }));
-  app.use('*', localeMiddleware);
 
   // Public routes come first: handlers run in registration order, so these
   // answer before the authenticate middleware below.

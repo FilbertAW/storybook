@@ -38,7 +38,13 @@ export function BookDetailPage() {
             <AccessBadge access={b.access} />
             <h1 className="text-2xl leading-tight font-semibold">{b.title}</h1>
             <p className="text-sm text-muted-foreground">
-              {t('book.byline', { author: b.authorName, min: b.ageMin, max: b.ageMax, pages: b.pageCount })}
+              {t('book.byline', {
+                author: b.authorName,
+                min: b.ageMin,
+                max: b.ageMax,
+                pages: b.pageCount,
+                language: t(b.language === 'id' ? 'book.lang.id' : 'book.lang.en'),
+              })}
             </p>
           </div>
           <p className="text-sm leading-relaxed">{b.description}</p>

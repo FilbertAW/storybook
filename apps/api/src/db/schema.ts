@@ -3,7 +3,6 @@ import {
   check,
   index,
   integer,
-  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -41,6 +40,7 @@ export const books = sqliteTable(
     authorName: text('author_name').notNull(),
     description: text('description').notNull(),
     coverUrl: text('cover_url').notNull(),
+    language: text('language', { enum: ['id', 'en'] }).notNull(),
     ageMin: integer('age_min').notNull(),
     ageMax: integer('age_max').notNull(),
     priceIdr: integer('price_idr').notNull(),
@@ -51,6 +51,7 @@ export const books = sqliteTable(
     archivedAt: integer('archived_at'),
   },
   (t) => [
+    check('books_language_check', sql`${t.language} in ('id', 'en')`),
     check('books_status_check', sql`${t.status} in ('published', 'archived')`),
     check('books_price_check', sql`${t.priceIdr} > 0`),
     check('books_preview_check', sql`${t.previewPageCount} >= 0`),
@@ -74,39 +75,6 @@ export const bookPages = sqliteTable(
   (t) => [
     uniqueIndex('book_pages_book_page_idx').on(t.bookId, t.pageNumber),
     check('book_pages_number_check', sql`${t.pageNumber} >= 1`),
-  ],
-);
-
-// A book's title and description in a language other than the original.
-export const bookTranslations = sqliteTable(
-  'book_translations',
-  {
-    bookId: text('book_id')
-      .notNull()
-      .references(() => books.id, { onDelete: 'cascade' }),
-    locale: text('locale', { enum: ['id'] }).notNull(),
-    title: text('title').notNull(),
-    description: text('description').notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.bookId, t.locale] }),
-    check('book_translations_locale_check', sql`${t.locale} in ('id')`),
-  ],
-);
-
-// One page's text in a language other than the original.
-export const bookPageTranslations = sqliteTable(
-  'book_page_translations',
-  {
-    pageId: text('page_id')
-      .notNull()
-      .references(() => bookPages.id, { onDelete: 'cascade' }),
-    locale: text('locale', { enum: ['id'] }).notNull(),
-    text: text('text').notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.pageId, t.locale] }),
-    check('book_page_translations_locale_check', sql`${t.locale} in ('id')`),
   ],
 );
 

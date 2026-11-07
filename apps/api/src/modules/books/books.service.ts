@@ -10,15 +10,13 @@ import type {
   CreatorBookWithPagesDto,
   CreatorBooksResponse,
   DeleteBookResponse,
-  Locale,
   UpdateBookRequest,
 } from '@storylib/shared';
-import { BASE_LOCALE, type BookTranslationInput } from '@storylib/shared';
 import type { Scope, UserRow } from '../../shared/app-env';
 import type { Clock } from '../../shared/clock';
 import { AppError } from '../../shared/errors';
 import type { AccessService } from '../access/access.service';
-import type { BookRow, BooksRepository, BookTranslation } from './books.repository';
+import type { BookRow, BooksRepository } from './books.repository';
 
 const DEFAULT_PREVIEW_PAGES = 2;
 
@@ -32,6 +30,7 @@ function toDto(row: BookRow): CreatorBookDto {
     authorName: row.authorName,
     description: row.description,
     coverUrl: row.coverUrl,
+    language: row.language,
     ageMin: row.ageMin,
     ageMax: row.ageMax,
     priceIdr: row.priceIdr,
@@ -45,13 +44,14 @@ function toDto(row: BookRow): CreatorBookDto {
 }
 
 // A kid sees only books the family can read in full, and never a price.
-function toSummary(row: BookRow, access: Access, scope: Scope, tr?: BookTranslation): BookSummaryDto {
+function toSummary(row: BookRow, access: Access, scope: Scope): BookSummaryDto {
   return {
     id: row.id,
-    title: tr?.title ?? row.title,
+    title: row.title,
     authorName: row.authorName,
-    description: tr?.description ?? row.description,
+    description: row.description,
     coverUrl: row.coverUrl,
+    language: row.language,
     ageMin: row.ageMin,
     ageMax: row.ageMax,
     ...(scope === 'kid' ? {} : { priceIdr: row.priceIdr }),
@@ -69,15 +69,13 @@ export class BookService {
     private readonly clock: Clock,
   ) {}
 
-  async list(user: UserRow, scope: Scope, query: BooksQuery, locale: Locale = BASE_LOCALE): Promise<BooksResponse> {
+  async list(user: UserRow, scope: Scope, query: BooksQuery): Promise<BooksResponse> {
     const subject = await this.access.subjectFor(user);
     const rows = await this.books.listCatalog({
       purchasedBookIds: [...subject.purchasedBookIds],
       q: query.q,
       age: query.age,
-      locale,
     });
-    const translations = await this.books.translations(rows.map((r) => r.id), locale);
     const items: BookSummaryDto[] = [];
     for (const row of rows) {
       const access = this.access.resolve(subject, row);
@@ -85,21 +83,20 @@ export class BookService {
       if (scope === 'kid' && access.level !== 'full') continue;
       if (query.access === 'full' && access.level !== 'full') continue;
       if (query.access === 'locked' && access.level !== 'preview') continue;
-      items.push(toSummary(row, access, scope, translations.get(row.id)));
+      items.push(toSummary(row, access, scope));
     }
     return { books: items };
   }
 
-  async detail(user: UserRow, scope: Scope, id: string, locale: Locale = BASE_LOCALE): Promise<BookSummaryDto> {
+  async detail(user: UserRow, scope: Scope, id: string): Promise<BookSummaryDto> {
     const { book, access } = await this.visible(user, scope, id);
-    const translations = await this.books.translations([id], locale);
-    return toSummary(book, access, scope, translations.get(id));
+    return toSummary(book, access, scope);
   }
 
-  async pages(user: UserRow, scope: Scope, id: string, locale: Locale = BASE_LOCALE): Promise<BookPagesResponse> {
+  async pages(user: UserRow, scope: Scope, id: string): Promise<BookPagesResponse> {
     const { book, access } = await this.visible(user, scope, id);
     const shown = this.shownPages(book, access);
-    const pages = await this.books.getPages(id, access.level === 'full' ? undefined : shown, locale);
+    const pages = await this.books.getPages(id, access.level === 'full' ? undefined : shown);
     return {
       pages,
       totalPages: book.pageCount,
@@ -108,13 +105,7 @@ export class BookService {
     };
   }
 
-  async page(
-    user: UserRow,
-    scope: Scope,
-    id: string,
-    pageNumber: number,
-    locale: Locale = BASE_LOCALE,
-  ): Promise<BookPageResponse> {
+  async page(user: UserRow, scope: Scope, id: string, pageNumber: number): Promise<BookPageResponse> {
     const { book, access } = await this.visible(user, scope, id);
     if (pageNumber < 1 || pageNumber > book.pageCount) {
       throw new AppError('NOT_FOUND', 'Page not found.');
@@ -124,7 +115,7 @@ export class BookService {
         bookId: id,
       });
     }
-    const page = await this.books.getPage(id, pageNumber, locale);
+    const page = await this.books.getPage(id, pageNumber);
     if (!page) throw new AppError('NOT_FOUND', 'Page not found.');
     return { page, totalPages: book.pageCount, access };
   }
@@ -136,8 +127,7 @@ export class BookService {
 
   async create(creator: UserRow, input: CreateBookRequest): Promise<CreatorBookWithPagesDto> {
     const now = this.clock.now();
-    const { pages, authorName, previewPageCount, translations, ...fields } = input;
-    this.checkTranslation(translations?.id, pages.length);
+    const { pages, authorName, previewPageCount, ...fields } = input;
     const id = await this.books.insertWithPages(
       {
         ...fields,
@@ -149,12 +139,7 @@ export class BookService {
         updatedAt: now,
       },
       pages,
-      translations?.id,
     );
-    return this.withPages(await this.owned(creator, id));
-  }
-
-  async getOwn(creator: UserRow, id: string): Promise<CreatorBookWithPagesDto> {
     return this.withPages(await this.owned(creator, id));
   }
 
@@ -163,14 +148,13 @@ export class BookService {
     if (book.status === 'archived') {
       throw new AppError('VALIDATION_ERROR', 'Archived books can no longer be edited.');
     }
-    const { pages, translations, ...changes } = input;
-    this.checkTranslation(translations?.id, pages?.length ?? book.pageCount);
+    const { pages, ...changes } = input;
     const ageMin = changes.ageMin ?? book.ageMin;
     const ageMax = changes.ageMax ?? book.ageMax;
     if (ageMin > ageMax) {
       throw new AppError('VALIDATION_ERROR', 'ageMin must not be greater than ageMax.');
     }
-    await this.books.update(id, { ...changes, updatedAt: this.clock.now() }, pages, translations?.id);
+    await this.books.update(id, { ...changes, updatedAt: this.clock.now() }, pages);
     return this.withPages(await this.owned(creator, id));
   }
 
@@ -206,18 +190,7 @@ export class BookService {
     return book;
   }
 
-  // Translated pages are one per page, or none at all.
-  private checkTranslation(translation: BookTranslationInput | undefined, pageCount: number) {
-    if (translation && translation.pages.length !== 0 && translation.pages.length !== pageCount) {
-      throw new AppError('VALIDATION_ERROR', 'Give one translated text for every page, or none.');
-    }
-  }
-
   private async withPages(book: BookRow): Promise<CreatorBookWithPagesDto> {
-    return {
-      ...toDto(book),
-      pages: await this.books.getPages(book.id),
-      translations: { id: await this.books.translationOf(book.id) },
-    };
+    return { ...toDto(book), pages: await this.books.getPages(book.id) };
   }
 }
