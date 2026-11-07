@@ -1,9 +1,11 @@
 import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useBooks } from '@/api/queries'
+import type { BookSummaryDto } from '@storylib/shared'
 import { BookCard } from '@/components/BookCard'
 import { Empty, ErrorNotice, Loading } from '@/components/PageState'
 import { Input } from '@/components/ui/input'
+import { BookPreviewDialog } from '@/features/library/BookPreviewDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type Tab = 'all' | 'full' | 'locked'
@@ -29,6 +31,7 @@ export function LibraryPage() {
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
   const [age, setAge] = useState('')
+  const [previewing, setPreviewing] = useState<BookSummaryDto | null>(null)
   const q = useDebounced(search.trim(), 300)
 
   const books = useBooks({ access: tab, q: q || undefined, age: age ? Number(age) : undefined })
@@ -83,10 +86,11 @@ export function LibraryPage() {
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
             {books.data.books.map((book) => (
-              <BookCard key={book.id} book={book} />
+              <BookCard key={book.id} book={book} onPreview={setPreviewing} />
             ))}
           </div>
         ))}
+      {previewing && <BookPreviewDialog key={previewing.id} book={previewing} onClose={() => setPreviewing(null)} />}
     </div>
   )
 }

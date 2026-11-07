@@ -3,13 +3,14 @@ import { Link } from 'react-router'
 import { AccessBadge } from '@/components/AccessBadge'
 import { formatIdr } from '@/lib/format'
 
-export function BookCard({ book }: { book: BookSummaryDto }) {
-  const showPrice = book.access.reason === 'locked' && book.priceIdr !== undefined
-  return (
-    <Link
-      to={`/books/${book.id}`}
-      className="group flex flex-col gap-2 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
+const CARD_CLASS = 'group flex flex-col gap-2 rounded-xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+
+// A locked book calls onPreview (a modal) when given one; everything else opens its page.
+export function BookCard({ book, onPreview }: { book: BookSummaryDto; onPreview?: (book: BookSummaryDto) => void }) {
+  const locked = book.access.reason === 'locked'
+  const showPrice = locked && book.priceIdr !== undefined
+  const content = (
+    <>
       <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-muted">
         <img
           src={book.coverUrl}
@@ -28,6 +29,18 @@ export function BookCard({ book }: { book: BookSummaryDto }) {
           {showPrice ? ` · ${formatIdr(book.priceIdr!)}` : ''}
         </p>
       </div>
+    </>
+  )
+  if (locked && onPreview) {
+    return (
+      <button type="button" className={CARD_CLASS} onClick={() => onPreview(book)}>
+        {content}
+      </button>
+    )
+  }
+  return (
+    <Link to={`/books/${book.id}`} className={CARD_CLASS}>
+      {content}
     </Link>
   )
 }

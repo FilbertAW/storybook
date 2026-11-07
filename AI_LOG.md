@@ -119,3 +119,11 @@ The AI-usage slide is written from this file.
 **Produced:** `storylib-api` (root `apps/api`) and `storylib-web` (root `apps/web`) on Vercel, Turso reset and seeded to the no-draft schema, CORS set to the web origin, SPA rewrite for the web app. The first API deploys failed: `npm install` could not resolve the workspace package from `apps/api`; then Node could not load extensionless TypeScript imports (`ERR_MODULE_NOT_FOUND`); then Vercel wants a static output directory; then a default-exported Hono handler is ignored (needs one export per HTTP method). The fix was an esbuild bundle (`esbuild` added as a devDependency with the user's approval), a placeholder `public/robots.txt`, and per-method exports in `src/vercel.ts`. Node pinned to 22.x.
 
 **Verified on production (curl):** health, login, parent A's library shows 5 locked + 1 purchased, parent B all `subscription`, a locked page fetched directly returns 403, a kid token gets 403 on `/me`, no token is 401, a parent on a creator route is 403, CORS preflight allows only the web origin. Not re-run on production: checkout, PIN lockout and subscription expiry (covered by the 180 API tests and the in-process journeys), and the rendered UI.
+
+## Follow-up: preview modal for locked books
+
+**Prompt:** For a locked book, open a modal instead of navigating, so a parent sees the preview with the price on top.
+
+**Produced:** `BookPreviewDialog` (Base UI dialog): title and author, a price bar with "Buy this book" and "Subscribe" above, then the preview pages with Back/Next and an end-of-preview note. The library's `BookCard` takes an optional `onPreview` and uses it only for locked books; owned and subscription books still open the book page. It logs the same `book_opened` and `preview_completed` events as the reader. The book page and reader still work for direct links. Creators see the preview without buy buttons.
+
+**Not verified:** how it renders (typecheck, lint and build only).
