@@ -10,15 +10,6 @@ import { Input } from '@/components/ui/input'
 import { startSession } from '@/features/session/actions'
 import { useSessionStore } from '@/stores/session'
 
-// The seeded accounts (see the README). Login is a mock: pick one, get a signed token.
-const DEMO_ACCOUNTS = [
-  { email: 'parent.a@example.com', label: 'Parent A', note: 'No subscription · owns one book · PIN 1234' },
-  { email: 'parent.b@example.com', label: 'Parent B', note: 'Active subscription · PIN 1234' },
-  { email: 'parent.c@example.com', label: 'Parent C', note: 'Subscription ended · owns a retired book · no PIN yet' },
-  { email: 'sari@example.com', label: 'Sari (creator)', note: '3 published books' },
-  { email: 'budi@example.com', label: 'Budi (creator)', note: '3 published books and a retired one' },
-]
-
 export function LoginPage() {
   const { token, mode } = useSessionStore()
   const navigate = useNavigate()
@@ -39,31 +30,19 @@ export function LoginPage() {
       <div className="flex flex-col items-center gap-2 text-center">
         <BookOpen className="size-9" />
         <h1 className="text-2xl font-semibold">Storybook Library</h1>
-        <p className="text-sm text-muted-foreground">Picture books for ages 2–8. Pick an account to sign in.</p>
+        <p className="text-sm text-muted-foreground">Picture books for ages 2–8.</p>
       </div>
 
       {login.isError && <ErrorNotice title="Could not sign in" error={login.error} />}
 
       <Card>
         <CardHeader>
-          <CardTitle>Demo accounts</CardTitle>
-          <CardDescription>No password: this is a mock login for the demo.</CardDescription>
+          <CardTitle>Sign in</CardTitle>
+          <CardDescription>Use the email address of your account.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {DEMO_ACCOUNTS.map((a) => (
-            <Button
-              key={a.email}
-              variant="outline"
-              className="h-auto flex-col items-start gap-0.5 py-2 whitespace-normal"
-              disabled={login.isPending}
-              onClick={() => login.mutate(a.email)}
-            >
-              <span>{a.label}</span>
-              <span className="text-xs font-normal text-muted-foreground">{a.note}</span>
-            </Button>
-          ))}
+        <CardContent>
           <form
-            className="mt-2 flex gap-2"
+            className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault()
               if (email.trim()) login.mutate(email.trim())
@@ -71,12 +50,13 @@ export function LoginPage() {
           >
             <Input
               type="email"
-              placeholder="or type a seeded email"
+              placeholder="you@example.com"
               aria-label="Email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Button type="submit" disabled={login.isPending || !email.trim()}>
+            <Button type="submit" size="lg" disabled={login.isPending || !email.trim()}>
               Sign in
             </Button>
           </form>

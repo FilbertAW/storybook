@@ -136,19 +136,17 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
 
         {phase === 'payment' && order && (
           <CardFooter className="flex-col items-stretch gap-3">
-            <Alert>
-              <AlertTitle>Mock payment</AlertTitle>
-              <AlertDescription>No real money moves. Choose how this payment should end.</AlertDescription>
-            </Alert>
             {pay.isError && !(pay.error instanceof ApiError && pay.error.code === 'PAYMENT_FAILED') && (
               <ErrorNotice error={pay.error} title="Payment error" />
             )}
             <Button size="lg" disabled={pay.isPending} onClick={() => pay.mutate('success')}>
               Pay {formatIdr(order.amountIdr)}
             </Button>
-            <Button variant="outline" disabled={pay.isPending} onClick={() => pay.mutate('fail')}>
-              Simulate failure
-            </Button>
+            {/* To demo a failed payment, add a second button here:
+                <Button variant="outline" disabled={pay.isPending} onClick={() => pay.mutate('fail')}>
+                  Simulate failure
+                </Button>
+                The API already supports it (`simulate: 'fail'`) and the 'failed' phase below handles the result. */}
           </CardFooter>
         )}
 

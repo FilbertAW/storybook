@@ -127,3 +127,11 @@ The AI-usage slide is written from this file.
 **Produced:** `BookPreviewDialog` (Base UI dialog): title and author, a price bar with "Buy this book" and "Subscribe" above, then the preview pages with Back/Next and an end-of-preview note. The library's `BookCard` takes an optional `onPreview` and uses it only for locked books; owned and subscription books still open the book page. It logs the same `book_opened` and `preview_completed` events as the reader. The book page and reader still work for direct links. Creators see the preview without buy buttons.
 
 **Not verified:** how it renders (typecheck, lint and build only).
+
+## Follow-up: production-looking UI
+
+**Prompt:** Stop showing the demo accounts on the sign-in page and list the credentials in the README instead; remove the "Simulate failure" button and the mock-payment wording, but keep the comment and the wiring so the failure can be demoed later.
+
+**Produced:** The login page is a plain email sign-in. The checkout payment step is a single Pay button; the failure button is a commented block with the one-line `pay.mutate('fail')` call, the API's `simulate: 'fail'` is untouched, and the `failed` phase still handles the result. README has an "Account credentials" table and a "Simulating a failed payment" section (uncomment the button, or call the API).
+
+**Kept:** the email-only mock login (no password field, so the UI does not pretend to check one).

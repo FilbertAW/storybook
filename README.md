@@ -25,21 +25,32 @@ pnpm web dev          # web on http://localhost:5173
 
 Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test` (API tests, in-memory SQLite).
 
-## Seeded accounts
+## Account credentials
 
-Log in with the email only (mock login, no password).
+The sign-in page only asks for an email. Login is a mock, so there is no password. Use one of the seeded accounts:
 
-| Email | Role | Scenario |
+| Email | Role | What it shows |
 | --- | --- | --- |
-| `parent.a@example.com` | parent | No subscription, owns a book, PIN `1234` |
-| `parent.b@example.com` | parent | Active subscription, PIN `1234` |
-| `parent.c@example.com` | parent | Expired subscription, owns an archived book, **no PIN set** |
-| `sari@example.com` | creator | Has published books |
-| `budi@example.com` | creator | Has published books |
+| `parent.a@example.com` | parent | No subscription, owns one book, PIN `1234`. The locked → buy → read journey. |
+| `parent.b@example.com` | parent | Active subscription, PIN `1234`. Every book is open; buying one shows the overlap warning. |
+| `parent.c@example.com` | parent | Subscription ended, owns a retired book, **no PIN yet**. The set-a-PIN flow. |
+| `sari@example.com` | creator | Three published books. Create, edit and delete. |
+| `budi@example.com` | creator | Three published books and a retired one. |
 
-The demo parent PIN is **1234**. Entering Kid mode needs a PIN, so parent C is the "set a PIN first" flow. Five wrong PINs lock Kid-mode exit for five minutes.
+The parent PIN for Kid mode is **1234** (parents A and B). Five wrong PINs lock Kid-mode exit for five minutes.
 
-Payments are mocked: the checkout page lets you choose success or failure.
+## Payments
+
+Payments go through a `PaymentGateway` interface; the only implementation is `MockPaymentGateway`, so no real money moves. The checkout page has a single **Pay** button, which succeeds.
+
+### Simulating a failed payment
+
+The failure path is built and tested but its button is hidden. To show it:
+
+1. In `apps/web/src/features/checkout/CheckoutPage.tsx`, uncomment the **Simulate failure** button in the payment step (the commented block next to the Pay button). It calls `pay.mutate('fail')`.
+2. Pay with it: the order is marked `failed`, the page shows "Payment failed", and nothing is granted. "Try again" starts a new order, because a failed order cannot be paid.
+
+Or call the API directly: `POST /api/v1/orders/:id/pay` with `{ "simulate": "fail" }` returns 402 `PAYMENT_FAILED`.
 
 ## Demonstrating subscription expiry
 
