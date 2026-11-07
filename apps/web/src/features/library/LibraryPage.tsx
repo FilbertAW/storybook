@@ -16,8 +16,6 @@ const TABS: Array<{ value: Tab; label: string; empty: string }> = [
   { value: 'locked', label: 'Locked', empty: 'Nothing is locked. You can read everything here.' },
 ]
 
-const AGES = [2, 3, 4, 5, 6, 7, 8]
-
 function useDebounced<T>(value: T, ms: number) {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
@@ -30,11 +28,10 @@ function useDebounced<T>(value: T, ms: number) {
 export function LibraryPage() {
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
-  const [age, setAge] = useState('')
   const [previewing, setPreviewing] = useState<BookSummaryDto | null>(null)
   const q = useDebounced(search.trim(), 300)
 
-  const books = useBooks({ access: tab, q: q || undefined, age: age ? Number(age) : undefined })
+  const books = useBooks({ access: tab, q: q || undefined })
   const emptyText = TABS.find((t) => t.value === tab)!.empty
 
   return (
@@ -62,26 +59,13 @@ export function LibraryPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <select
-            aria-label="Age"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-          >
-            <option value="">Any age</option>
-            {AGES.map((a) => (
-              <option key={a} value={a}>
-                Age {a}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
       {books.isPending && <Loading />}
       {books.isError && <ErrorNotice error={books.error} title="Could not load books" />}
       {books.data && (
-        // The previous results stay on screen while a new tab, search or age loads; dim them and say so.
+        // The previous results stay on screen while a new tab or search loads; dim them and say so.
         <div className="relative" aria-busy={books.isPlaceholderData}>
           <div className={books.isPlaceholderData ? 'pointer-events-none opacity-40 transition-opacity' : 'transition-opacity'}>
             {books.data.books.length === 0 ? (

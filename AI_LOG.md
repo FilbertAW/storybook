@@ -149,3 +149,9 @@ The AI-usage slide is written from this file.
 **Produced:** The library keeps the previous results while a new tab, search or age loads; they are now dimmed, not clickable, and an "Updating books…" pill with a spinner shows over them (`isPlaceholderData`). A `LoadingButton` (spinner, disabled and `aria-busy` while pending) is used for sign in, continue to payment, buy it anyway, pay, delete a book, publish or save a book, cancel subscription, start Kid mode and save PIN. The keypad's OK button shows a spinner while the PIN is checked.
 
 **Not verified:** how it looks (typecheck, lint and build only).
+
+## Follow-up: no age filter in the library
+
+**Prompt:** The age filter isn't needed.
+
+**Produced:** Removed the age dropdown and its state from the library page; search and the All / My books / Locked tabs stay. The API's `age` query parameter is untouched (still tested), so a filter can come back without a backend change.
