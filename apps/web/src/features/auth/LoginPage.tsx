@@ -3,8 +3,8 @@ import { BookOpen } from 'lucide-react'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { authApi } from '@/api/endpoints'
+import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice } from '@/components/PageState'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { startSession } from '@/features/session/actions'
@@ -56,9 +56,9 @@ export function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Button type="submit" size="lg" disabled={login.isPending || !email.trim()}>
+            <LoadingButton type="submit" size="lg" pending={login.isPending} disabled={!email.trim()}>
               Sign in
-            </Button>
+            </LoadingButton>
           </form>
         </CardContent>
       </Card>

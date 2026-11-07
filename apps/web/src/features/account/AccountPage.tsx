@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { authApi, checkoutApi } from '@/api/endpoints'
 import { keys, useMe, useOrders } from '@/api/queries'
+import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -106,9 +107,9 @@ function SubscriptionCard({ subscription }: { subscription: NonNullable<ReturnTy
             <Button variant="outline" onClick={() => setConfirming(false)}>
               Keep it
             </Button>
-            <Button variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+            <LoadingButton variant="destructive" pending={cancel.isPending} onClick={() => cancel.mutate()}>
               Cancel subscription
-            </Button>
+            </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -162,9 +163,9 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
       <CardContent className="flex flex-col gap-4">
         {enter.isError && <ErrorNotice error={enter.error} title="Could not start Kid mode" />}
         {pinSet && (
-          <Button size="lg" className="self-start" disabled={enter.isPending} onClick={() => enter.mutate()}>
-            <Smile /> Start Kid mode
-          </Button>
+          <LoadingButton size="lg" className="self-start" pending={enter.isPending} onClick={() => enter.mutate()}>
+            {!enter.isPending && <Smile />} Start Kid mode
+          </LoadingButton>
         )}
 
         <form
@@ -204,9 +205,9 @@ function KidModeCard({ pinSet }: { pinSet: boolean }) {
               <AlertDescription>PIN saved.</AlertDescription>
             </Alert>
           )}
-          <Button type="submit" variant="secondary" className="self-start" disabled={!canSave || save.isPending}>
+          <LoadingButton type="submit" variant="secondary" className="self-start" pending={save.isPending} disabled={!canSave}>
             {pinSet ? 'Change PIN' : 'Save PIN'}
-          </Button>
+          </LoadingButton>
         </form>
       </CardContent>
     </Card>

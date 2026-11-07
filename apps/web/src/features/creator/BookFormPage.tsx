@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { creatorApi } from '@/api/endpoints'
 import { keys, useBookPages, useCreatorBooks } from '@/api/queries'
+import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -208,9 +209,9 @@ function BookForm({ initial, bookId }: { initial: FormValues; bookId?: string })
         {save.isError && <ErrorNotice error={save.error} title="Could not save the book" />}
 
         <div className="flex gap-2">
-          <Button type="submit" size="lg" disabled={save.isPending}>
+          <LoadingButton type="submit" size="lg" pending={save.isPending}>
             {bookId ? 'Save changes' : 'Publish book'}
-          </Button>
+          </LoadingButton>
           <Button type="button" size="lg" variant="ghost" render={<Link to="/creator" />} nativeButton={false}>
             Cancel
           </Button>

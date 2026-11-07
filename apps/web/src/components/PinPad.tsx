@@ -1,4 +1,4 @@
-import { Delete } from 'lucide-react'
+import { Delete, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { PIN_LENGTH } from '@storylib/shared'
 import { Button } from '@/components/ui/button'
@@ -45,8 +45,8 @@ export function PinPad({ onSubmit, busy = false, submitLabel = 'Unlock' }: PinPa
         <Button variant="outline" className="size-14 text-lg" onClick={() => press('0')} disabled={busy}>
           0
         </Button>
-        <Button className="size-14" onClick={submit} disabled={busy || pin.length < PIN_LENGTH} aria-label={submitLabel}>
-          OK
+        <Button className="size-14" onClick={submit} disabled={busy || pin.length < PIN_LENGTH} aria-label={submitLabel} aria-busy={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : 'OK'}
         </Button>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { creatorApi } from '@/api/endpoints'
 import { keys, useCreatorBooks } from '@/api/queries'
+import { LoadingButton } from '@/components/LoadingButton'
 import { Empty, ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -103,9 +104,9 @@ export function CreatorDashboard() {
             <Button variant="outline" onClick={() => setDeleting(null)}>
               Keep it
             </Button>
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => deleting && remove.mutate(deleting.id)}>
+            <LoadingButton variant="destructive" pending={remove.isPending} onClick={() => deleting && remove.mutate(deleting.id)}>
               Delete
-            </Button>
+            </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

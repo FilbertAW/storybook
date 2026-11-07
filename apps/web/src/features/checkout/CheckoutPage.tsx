@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router'
 import { ApiError } from '@/api/errors'
 import { checkoutApi } from '@/api/endpoints'
 import { keys, useBook, usePlans } from '@/api/queries'
+import { LoadingButton } from '@/components/LoadingButton'
 import { ErrorNotice, Loading } from '@/components/PageState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -106,9 +107,9 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
         {phase === 'review' && (
           <CardFooter className="flex-col items-stretch gap-3">
             {blockingError && <ErrorNotice error={createOrder.error} title="This can't be bought" />}
-            <Button size="lg" disabled={createOrder.isPending} onClick={() => createOrder.mutate(false)}>
+            <LoadingButton size="lg" pending={createOrder.isPending} onClick={() => createOrder.mutate(false)}>
               Continue to payment
-            </Button>
+            </LoadingButton>
             <Button variant="ghost" render={<Link to={backTo} />} nativeButton={false}>
               Cancel
             </Button>
@@ -125,9 +126,9 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
                 refund or change it. The book will stay yours after the subscription ends, and even if the creator removes it.
               </AlertDescription>
             </Alert>
-            <Button size="lg" disabled={createOrder.isPending} onClick={() => createOrder.mutate(true)}>
+            <LoadingButton size="lg" pending={createOrder.isPending} onClick={() => createOrder.mutate(true)}>
               Buy it anyway
-            </Button>
+            </LoadingButton>
             <Button variant="ghost" render={<Link to={backTo} />} nativeButton={false}>
               Not now
             </Button>
@@ -139,9 +140,9 @@ export function CheckoutPage({ kind }: { kind: 'book' | 'subscription' }) {
             {pay.isError && !(pay.error instanceof ApiError && pay.error.code === 'PAYMENT_FAILED') && (
               <ErrorNotice error={pay.error} title="Payment error" />
             )}
-            <Button size="lg" disabled={pay.isPending} onClick={() => pay.mutate('success')}>
+            <LoadingButton size="lg" pending={pay.isPending} onClick={() => pay.mutate('success')}>
               Pay {formatIdr(order.amountIdr)}
-            </Button>
+            </LoadingButton>
             {/* To demo a failed payment, add a second button here:
                 <Button variant="outline" disabled={pay.isPending} onClick={() => pay.mutate('fail')}>
                   Simulate failure

@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useBooks } from '@/api/queries'
 import type { BookSummaryDto } from '@storylib/shared'
@@ -80,16 +80,29 @@ export function LibraryPage() {
 
       {books.isPending && <Loading />}
       {books.isError && <ErrorNotice error={books.error} title="Could not load books" />}
-      {books.data &&
-        (books.data.books.length === 0 ? (
-          <Empty>{emptyText}</Empty>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
-            {books.data.books.map((book) => (
-              <BookCard key={book.id} book={book} onPreview={setPreviewing} />
-            ))}
+      {books.data && (
+        // The previous results stay on screen while a new tab, search or age loads; dim them and say so.
+        <div className="relative" aria-busy={books.isPlaceholderData}>
+          <div className={books.isPlaceholderData ? 'pointer-events-none opacity-40 transition-opacity' : 'transition-opacity'}>
+            {books.data.books.length === 0 ? (
+              <Empty>{emptyText}</Empty>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
+                {books.data.books.map((book) => (
+                  <BookCard key={book.id} book={book} onPreview={setPreviewing} />
+                ))}
+              </div>
+            )}
           </div>
-        ))}
+          {books.isPlaceholderData && (
+            <div role="status" className="absolute inset-x-0 top-12 flex justify-center">
+              <span className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm shadow-sm">
+                <Loader2 className="size-4 animate-spin" /> Updating books…
+              </span>
+            </div>
+          )}
+        </div>
+      )}
       {previewing && <BookPreviewDialog key={previewing.id} book={previewing} onClose={() => setPreviewing(null)} />}
     </div>
   )

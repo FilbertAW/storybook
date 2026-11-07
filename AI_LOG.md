@@ -141,3 +141,11 @@ The AI-usage slide is written from this file.
 **Prompt:** Limit the PIN to 4 numbers and do not show 6 slots.
 
 **Produced:** `pinSchema` is exactly 4 digits (shared `PIN_LENGTH = 4`, used by the keypad and the account form). The keypad shows 4 dots and enables OK at 4. The account form accepts at most 4 digits. API tests now also reject 5- and 6-digit PINs. `CLAUDE.md` and `docs/PLAN.md` say "4 digits". The demo PIN `1234` and the stored hashes are unchanged.
+
+## Follow-up: loading indicators
+
+**Prompt:** Show a loading indicator when switching library tabs, and on confirmations that wait for the API.
+
+**Produced:** The library keeps the previous results while a new tab, search or age loads; they are now dimmed, not clickable, and an "Updating books…" pill with a spinner shows over them (`isPlaceholderData`). A `LoadingButton` (spinner, disabled and `aria-busy` while pending) is used for sign in, continue to payment, buy it anyway, pay, delete a book, publish or save a book, cancel subscription, start Kid mode and save PIN. The keypad's OK button shows a spinner while the PIN is checked.
+
+**Not verified:** how it looks (typecheck, lint and build only).
