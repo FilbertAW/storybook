@@ -53,4 +53,9 @@ API and web are two Vercel projects from this repo. The database is Turso in pro
 - Web env: `VITE_API_URL`.
 - Run `pnpm api db:setup` against Turso with the production env to migrate and seed.
 
-Deployed links: _to be added after block 6._
+Deployed links:
+
+- Web: https://storylib-web.vercel.app
+- API: https://storylib-api.vercel.app/api/v1/health
+
+The API is bundled with esbuild for Vercel (`pnpm api build`, see `apps/api/scripts/build-vercel.mjs`). Deploy each project from the repo root with its Vercel project root directory set to `apps/api` or `apps/web`.
